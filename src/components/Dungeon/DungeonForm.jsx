@@ -1,7 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CharacterDropdown from "../Character/CharacterDropdown";
 
-// Each dungeon with loot, including "Mythic"
+// Utility: today's date in YYYY-MM-DD format
+function getTodayString() {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, "0");
+  const dd = String(today.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 const DUNGEONS = [
   {
     name: "Forgotten Crypt",
@@ -39,45 +47,65 @@ const DUNGEONS = [
   }
 ];
 
+const LAST_CHARACTER_KEY = "idle_loot_last_character";
+const LAST_DUNGEON_KEY = "idle_loot_last_dungeon";
+
 export default function DungeonForm({ characters, onAddRun }) {
-  const [characterId, setCharacterId] = useState("");
-  const [dungeon, setDungeon] = useState("");
-  const [loot, setLoot] = useState(["None"]);
-  const [date, setDate] = useState("");
+  // Load last-used character and dungeon from localStorage if available
+  const [characterId, setCharacterId] = useState(() => localStorage.getItem(LAST_CHARACTER_KEY) || "");
+  const [dungeon, setDungeon] = useState(() => localStorage.getItem(LAST_DUNGEON_KEY) || "");
+  const [loot, setLoot] = useState("None");
+  const [date, setDate] = useState(getTodayString());
 
-  // Get loot objects for selected dungeon
-  const currentLoot =
-    DUNGEONS.find((d) => d.name === dungeon)?.loot ?? [];
+  const currentLoot = DUNGEONS.find((d) => d.name === dungeon)?.loot ?? [];
 
-  function handleDungeonChange(e) {
-    setDungeon(e.target.value);
-    setLoot(["None"]);
-  }
+  // Persist character selection
+  useEffect(() => {
+    if (characterId) {
+      localStorage.setItem(LAST_CHARACTER_KEY, characterId);
+    }
+  }, [characterId]);
 
-  function handleLootChange(e) {
-    const selected = Array.from(e.target.selectedOptions, (o) => o.value);
-    setLoot(selected.length === 0 ? ["None"] : selected);
-  }
+  // Persist dungeon selection and reset loot to "None"
+  useEffect(() => {
+    if (dungeon) {
+      localStorage.setItem(LAST_DUNGEON_KEY, dungeon);
+    }
+    setLoot("None");
+  }, [dungeon]);
 
   function handleSubmit(e) {
     e.preventDefault();
     if (characterId && dungeon && date) {
-      // Save loot as objects (not just names)
+      // Save loot as an array for consistency
       const lootObjects =
-        loot[0] === "None"
+        loot === "None"
           ? []
-          : currentLoot.filter((item) => loot.includes(item.name));
+          : currentLoot.filter((item) => item.name === loot);
       onAddRun({
         characterId,
         dungeon,
         date,
-        loot: lootObjects
+        loot: lootObjects,
       });
-      setCharacterId("");
-      setDungeon("");
-      setDate("");
-      setLoot(["None"]);
+      // Don't reset character/dungeon, but reset loot and date
+      setDate(getTodayString());
+      setLoot("None");
     }
+  }
+
+  function handleCharacterChange(id) {
+    setCharacterId(id);
+    localStorage.setItem(LAST_CHARACTER_KEY, id);
+  }
+
+  function handleDungeonChange(e) {
+    setDungeon(e.target.value);
+    localStorage.setItem(LAST_DUNGEON_KEY, e.target.value);
+  }
+
+  function handleLootChange(e) {
+    setLoot(e.target.value || "None");
   }
 
   return (
@@ -85,7 +113,7 @@ export default function DungeonForm({ characters, onAddRun }) {
       <CharacterDropdown
         characters={characters}
         value={characterId}
-        onChange={setCharacterId}
+        onChange={handleCharacterChange}
       />
 
       {/* Dungeon Dropdown */}
@@ -105,13 +133,11 @@ export default function DungeonForm({ characters, onAddRun }) {
         ))}
       </select>
 
-      {/* Loot Dropdown (multi-select, dynamic, with "None" as default) */}
+      {/* Loot Dropdown - Single select only */}
       <select
         className="border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition-all"
         value={loot}
         onChange={handleLootChange}
-        multiple
-        size={currentLoot.length < 4 ? currentLoot.length + 1 : 4}
         disabled={!dungeon}
       >
         <option value="None">None</option>
@@ -127,7 +153,7 @@ export default function DungeonForm({ characters, onAddRun }) {
         className="border border-yellow-500 bg-gray-900 text-yellow-200 placeholder-yellow-600 rounded-xl px-4 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition-all"
         type="date"
         value={date}
-        onChange={(e) => setDate(e.target.value)}
+        onChange={e => setDate(e.target.value)}
         required
       />
 

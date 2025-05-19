@@ -3,8 +3,15 @@ import useDungeonRuns from "../hooks/useDungeonRuns";
 import CharacterManager from "../components/Character/CharacterManager";
 import DungeonForm from "../components/Dungeon/DungeonForm";
 
-
-// ...rarityColors and other imports if needed
+// Rarity colors (if you want to keep badges, update as needed)
+const rarityColors = {
+  Common: "bg-gray-700 text-gray-200 border-gray-600",
+  Uncommon: "bg-blue-800 text-blue-200 border-blue-400",
+  Rare: "bg-green-800 text-green-200 border-green-400",
+  Epic: "bg-red-900 text-red-300 border-red-400",
+  Legendary: "bg-yellow-500 text-yellow-900 border-yellow-300 font-extrabold",
+  Mythic: "bg-orange-600 text-orange-100 border-orange-300 font-extrabold"
+};
 
 export default function DungeonPage() {
   const { characters, addCharacter, removeCharacter } = useCharacters();
@@ -36,7 +43,11 @@ export default function DungeonPage() {
           {runs.length > 0 && (
             <button
               className="text-xs text-red-300 hover:text-red-200 underline"
-              onClick={clearRuns}
+              onClick={() => {
+                if (window.confirm("Are you sure you want to clear all entries?")) {
+                  clearRuns();
+                }
+              }}
             >
               Clear all
             </button>
@@ -67,7 +78,7 @@ export default function DungeonPage() {
                         : run.loot.map((item, idx) =>
                           <span
                             key={item.name}
-                            className={`inline-block mr-2 mb-1 px-2 py-1 rounded-full border text-xs align-middle`} // add rarityColors if needed
+                            className={`inline-block mr-2 mb-1 px-2 py-1 rounded-full border text-xs align-middle ${rarityColors[item.rarity]}`}
                             title={item.rarity}
                           >
                             {item.name}
@@ -80,7 +91,11 @@ export default function DungeonPage() {
                     <td className="py-2 px-4">
                       <button
                         className="text-xs text-red-400 hover:text-red-200 underline"
-                        onClick={() => removeRun(run.id)}
+                        onClick={() => {
+                          if (window.confirm("Are you sure you want to delete this entry?")) {
+                            removeRun(run.id);
+                          }
+                        }}
                       >
                         Delete
                       </button>
