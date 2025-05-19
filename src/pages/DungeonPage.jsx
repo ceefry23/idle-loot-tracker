@@ -71,6 +71,11 @@ export default function DungeonPage() {
     setFilterLoot("all");
   }
 
+  // Calculate totals from filtered runs
+  const totalSpent = filteredRuns.reduce((sum, run) => sum + (run.cost ?? 0), 0);
+  const totalProfit = filteredRuns.reduce((sum, run) => sum + (run.profit ?? 0), 0);
+  const totalLoss = totalSpent - totalProfit;
+
   return (
     <div>
       <h1 className="text-3xl font-extrabold mb-6 text-yellow-400 drop-shadow">
@@ -168,80 +173,100 @@ export default function DungeonPage() {
             No dungeon runs found.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm rounded-xl overflow-hidden">
-              <thead>
-                <tr className="bg-gray-800 text-yellow-400">
-                  <th className="py-3 px-4 text-left">Character</th>
-                  <th className="py-3 px-4 text-left">Dungeon</th>
-                  <th className="py-3 px-4 text-left">Cost</th>
-                  <th className="py-3 px-4 text-left">Loot</th>
-                  <th className="py-3 px-4 text-left">Profit</th>
-                  <th className="py-3 px-4 text-left">Date</th>
-                  <th className="py-3 px-4 text-left"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRuns.map((run) => (
-                  <tr
-                    key={run.id}
-                    className="border-b border-gray-800 hover:bg-yellow-900/10 transition"
-                  >
-                    <td className="py-2 px-4 text-yellow-200">
-                      {getCharacterName(run.characterId)}
-                    </td>
-                    <td className="py-2 px-4 text-yellow-100">{run.dungeon}</td>
-                    <td className="py-2 px-4 text-yellow-100">{run.cost ?? ""}</td>
-                    <td className="py-2 px-4">
-                      {!run.loot || run.loot.length === 0 ? (
-                        <span className="bg-gray-800 text-gray-400 px-2 py-1 rounded-full border border-gray-700 text-xs">
-                          None
-                        </span>
-                      ) : (
-                        run.loot.map((item) => (
-                          <span
-                            key={item.name}
-                            className={`inline-block mr-2 mb-1 px-2 py-1 rounded-full border text-xs align-middle ${rarityColors[item.rarity]}`}
-                            title={item.rarity}
-                          >
-                            {item.name}
-                            <span className="ml-1 opacity-80">({item.rarity})</span>
-                          </span>
-                        ))
-                      )}
-                    </td>
-                    <td className="py-2 px-4">
-                      <input
-                        type="number"
-                        step="any"
-                        min="0"
-                        value={run.profit ?? ""}
-                        onChange={(e) => updateProfit(run.id, e.target.value)}
-                        className="w-20 rounded border border-yellow-600 bg-gray-800 px-2 py-1 text-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                        placeholder="Profit"
-                      />
-                    </td>
-                    <td className="py-2 px-4 text-gray-200">{run.date}</td>
-                    <td className="py-2 px-4">
-                      <button
-                        className="text-xs text-red-400 hover:text-red-200 underline"
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              "Are you sure you want to delete this entry?"
-                            )
-                          )
-                            removeRun(run.id);
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </td>
+          <>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm rounded-xl overflow-hidden">
+                <thead>
+                  <tr className="bg-gray-800 text-yellow-400">
+                    <th className="py-3 px-4 text-left">Character</th>
+                    <th className="py-3 px-4 text-left">Dungeon</th>
+                    <th className="py-3 px-4 text-left">Cost</th>
+                    <th className="py-3 px-4 text-left">Loot</th>
+                    <th className="py-3 px-4 text-left">Profit</th>
+                    <th className="py-3 px-4 text-left">Date</th>
+                    <th className="py-3 px-4 text-left"></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {filteredRuns.map((run) => (
+                    <tr
+                      key={run.id}
+                      className="border-b border-gray-800 hover:bg-yellow-900/10 transition"
+                    >
+                      <td className="py-2 px-4 text-yellow-200">
+                        {getCharacterName(run.characterId)}
+                      </td>
+                      <td className="py-2 px-4 text-yellow-100">{run.dungeon}</td>
+                      <td className="py-2 px-4 text-yellow-100">{run.cost ?? ""}</td>
+                      <td className="py-2 px-4">
+                        {!run.loot || run.loot.length === 0 ? (
+                          <span className="bg-gray-800 text-gray-400 px-2 py-1 rounded-full border border-gray-700 text-xs">
+                            None
+                          </span>
+                        ) : (
+                          run.loot.map((item) => (
+                            <span
+                              key={item.name}
+                              className={`inline-block mr-2 mb-1 px-2 py-1 rounded-full border text-xs align-middle ${rarityColors[item.rarity]}`}
+                              title={item.rarity}
+                            >
+                              {item.name}
+                              <span className="ml-1 opacity-80">({item.rarity})</span>
+                            </span>
+                          ))
+                        )}
+                      </td>
+                      <td className="py-2 px-4">
+                        <input
+                          type="number"
+                          step="any"
+                          min="0"
+                          value={run.profit ?? ""}
+                          onChange={(e) => updateProfit(run.id, e.target.value)}
+                          className="w-20 rounded border border-yellow-600 bg-gray-800 px-2 py-1 text-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                          placeholder="Profit"
+                        />
+                      </td>
+                      <td className="py-2 px-4 text-gray-200">{run.date}</td>
+                      <td className="py-2 px-4">
+                        <button
+                          className="text-xs text-red-400 hover:text-red-200 underline"
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                "Are you sure you want to delete this entry?"
+                              )
+                            )
+                              removeRun(run.id);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Totals bubble */}
+            <div className="mt-6 p-4 rounded-xl bg-yellow-900 bg-opacity-20 text-yellow-300 font-semibold flex justify-around max-w-md mx-auto">
+              <div>
+                <div className="text-sm">Total Spent</div>
+                <div className="text-lg text-yellow-400">${totalSpent.toLocaleString()}</div>
+              </div>
+              <div>
+                <div className="text-sm">Total Profit</div>
+                <div className="text-lg text-yellow-400">${totalProfit.toLocaleString()}</div>
+              </div>
+              <div>
+                <div className="text-sm">Net Loss</div>
+                <div className={`text-lg font-bold ${totalLoss > 0 ? "text-red-500" : "text-green-400"}`}>
+                  ${totalLoss.toLocaleString()}
+                </div>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>
