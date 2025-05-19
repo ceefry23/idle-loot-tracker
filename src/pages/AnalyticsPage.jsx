@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -18,32 +18,38 @@ export default function AnalyticsDashboard() {
   const [runType, setRunType] = useState("all"); // all, dungeons, bosses
   const [filterCharacter, setFilterCharacter] = useState("");
 
-  // Choose runs based on runType
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  useEffect(() => {
+    function handleResize() {
+      setWindowWidth(window.innerWidth);
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const chartHeight = windowWidth < 640 ? 200 : 300;
+
   const runsToAnalyze = useMemo(() => {
     if (runType === "dungeons") return dungeonRuns;
     if (runType === "bosses") return bossRuns;
     return [...dungeonRuns, ...bossRuns];
   }, [runType, dungeonRuns, bossRuns]);
 
-  // Filter runs by selected character
   const filteredRuns = useMemo(() => {
     if (!filterCharacter) return runsToAnalyze;
     return runsToAnalyze.filter(run => run.characterId === filterCharacter);
   }, [filterCharacter, runsToAnalyze]);
 
-  // Summary calculations
   const totalRuns = filteredRuns.length;
   const totalSpent = filteredRuns.reduce((sum, r) => sum + (r.cost ?? 0), 0);
   const totalProfit = filteredRuns.reduce((sum, r) => sum + (r.profit ?? 0), 0);
   const netLoss = totalSpent - totalProfit;
 
-  // Runs by Character (for bar chart & table)
   const runsByCharacter = characters.map(char => ({
     name: char.name,
     runs: filteredRuns.filter(run => run.characterId === char.id).length,
   })).filter(d => d.runs > 0);
 
-  // Runs by Boss
   const runsByBoss = useMemo(() => {
     if (runType === "bosses" || runType === "all") {
       const bossCountMap = {};
@@ -55,7 +61,6 @@ export default function AnalyticsDashboard() {
     return [];
   }, [filteredRuns, runType]);
 
-  // Runs by Dungeon
   const runsByDungeon = useMemo(() => {
     if (runType === "dungeons" || runType === "all") {
       const dungeonCountMap = {};
@@ -67,7 +72,6 @@ export default function AnalyticsDashboard() {
     return [];
   }, [filteredRuns, runType]);
 
-  // Profit Over Time (by date)
   const profitByDateMap = {};
   filteredRuns.forEach(run => {
     if (!profitByDateMap[run.date]) profitByDateMap[run.date] = 0;
@@ -75,9 +79,8 @@ export default function AnalyticsDashboard() {
   });
   const profitByDate = Object.entries(profitByDateMap)
     .map(([date, profit]) => ({ date, profit }))
-    .sort((a, b) => new Date(a.date) - new Date(b.date)); // sort by date
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-  // Loot rarity distribution
   const rarityCount = {};
   filteredRuns.forEach(run => {
     run.loot?.forEach(item => {
@@ -86,12 +89,27 @@ export default function AnalyticsDashboard() {
   });
   const rarityData = Object.entries(rarityCount).map(([name, value]) => ({ name, value }));
 
-  return (
-    <div className="max-w-6xl mx-auto p-6 space-y-8">
-      <h1 className="text-4xl font-extrabold text-yellow-400 drop-shadow mb-6">Analytics Dashboard</h1>
+  const itemDropCounts = useMemo(() => {
+    const counts = {};
+    filteredRuns.forEach(run => {
+      run.loot?.forEach(item => {
+        counts[item.name] = (counts[item.name] || 0) + 1;
+      });
+    });
+    return Object.entries(counts).map(([name, count]) => ({ name, count }));
+  }, [filteredRuns]);
 
-      {/* Run Type Selector */}
-      <div className="flex gap-4 mb-6">
+  return (
+    <div className="max-w-2xl mx-auto pt-8 pb-32 px-4">
+      {/* Banner image */}
+      <img
+        src="/images/idle_loot_tracker.png"
+        alt="Idle Loot Tracker Banner"
+        className="w-full max-w-md mx-auto mb-6 rounded-xl shadow-lg"
+      />
+
+      {/* Run Type Selector - Centered */}
+      <div className="flex flex-wrap gap-4 mb-6 justify-center">
         {["all", "dungeons", "bosses"].map(type => (
           <button
             key={type}
@@ -109,7 +127,7 @@ export default function AnalyticsDashboard() {
       <select
         value={filterCharacter}
         onChange={e => setFilterCharacter(e.target.value)}
-        className="mb-8 px-4 py-3 rounded-xl bg-gray-900 text-yellow-200 border border-yellow-500"
+        className="mb-8 px-4 py-3 rounded-xl bg-gray-900 text-yellow-200 border border-yellow-500 w-full"
       >
         <option value="">All Characters</option>
         {characters.map(char => (
@@ -118,22 +136,24 @@ export default function AnalyticsDashboard() {
       </select>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-4 gap-6 mb-12">
-        <SummaryCard label="Total Runs" value={totalRuns} />
-        <SummaryCard label="Total Spent" value={`$${totalSpent.toLocaleString()}`} />
-        <SummaryCard label="Total Profit" value={`$${totalProfit.toLocaleString()}`} />
-        <SummaryCard
-          label="Net"
-          value={`$${netLoss.toLocaleString()}`}
-          valueClass={netLoss > 0 ? "text-red-500" : "text-green-400"}
-        />
+      <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6 mb-8">
+        <div className="grid grid-cols-2 gap-6">
+          <SummaryCard label="Total Runs" value={totalRuns} />
+          <SummaryCard label="Total Spent" value={`$${totalSpent.toLocaleString()}`} />
+          <SummaryCard label="Total Profit" value={`$${totalProfit.toLocaleString()}`} />
+          <SummaryCard
+            label="Net"
+            value={`$${netLoss.toLocaleString()}`}
+            valueClass={netLoss > 0 ? "text-red-500" : "text-green-400"}
+          />
+        </div>
       </div>
 
       {/* Charts grid */}
-      <div className="grid grid-cols-3 gap-8">
+      <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6 grid grid-cols-1 sm:grid-cols-2 gap-8">
         {/* Runs by Character */}
         <ChartCard title="Runs by Character">
-          <ResponsiveContainer width="100%" height={250}>
+          <ResponsiveContainer width="100%" height={chartHeight}>
             <BarChart data={runsByCharacter}>
               <XAxis dataKey="name" stroke="#FFD700" />
               <YAxis stroke="#FFD700" />
@@ -146,7 +166,7 @@ export default function AnalyticsDashboard() {
         {/* Runs by Boss */}
         {(runType === "bosses" || runType === "all") && runsByBoss.length > 0 && (
           <ChartCard title="Runs by Boss">
-            <ResponsiveContainer width="100%" height={250}>
+            <ResponsiveContainer width="100%" height={chartHeight}>
               <BarChart data={runsByBoss}>
                 <XAxis dataKey="name" stroke="#FFD700" />
                 <YAxis stroke="#FFD700" />
@@ -160,7 +180,7 @@ export default function AnalyticsDashboard() {
         {/* Runs by Dungeon */}
         {(runType === "dungeons" || runType === "all") && runsByDungeon.length > 0 && (
           <ChartCard title="Runs by Dungeon">
-            <ResponsiveContainer width="100%" height={250}>
+            <ResponsiveContainer width="100%" height={chartHeight}>
               <BarChart data={runsByDungeon}>
                 <XAxis dataKey="name" stroke="#FFD700" />
                 <YAxis stroke="#FFD700" />
@@ -173,7 +193,7 @@ export default function AnalyticsDashboard() {
 
         {/* Profit Over Time */}
         <ChartCard title="Profit Over Time">
-          <ResponsiveContainer width="100%" height={250}>
+          <ResponsiveContainer width="100%" height={chartHeight}>
             <LineChart data={profitByDate}>
               <XAxis dataKey="date" stroke="#FFD700" />
               <YAxis stroke="#FFD700" />
@@ -185,7 +205,7 @@ export default function AnalyticsDashboard() {
 
         {/* Loot Rarity Distribution */}
         <ChartCard title="Loot Rarity Distribution">
-          <ResponsiveContainer width="100%" height={250}>
+          <ResponsiveContainer width="100%" height={chartHeight}>
             <PieChart>
               <Pie
                 data={rarityData}
@@ -204,6 +224,24 @@ export default function AnalyticsDashboard() {
             </PieChart>
           </ResponsiveContainer>
         </ChartCard>
+
+        {/* Item Drop Counts */}
+        <ChartCard title="Item Drop Counts">
+          <ResponsiveContainer width="100%" height={chartHeight}>
+            <BarChart data={itemDropCounts} layout="vertical" margin={{ left: 50 }}>
+              <XAxis type="number" stroke="#FFD700" />
+              <YAxis
+                dataKey="name"
+                type="category"
+                stroke="#FFD700"
+                width={150}
+                tick={{ fontSize: 12 }}
+              />
+              <Tooltip />
+              <Bar dataKey="count" fill="#FFD700" />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
       </div>
     </div>
   );
@@ -211,7 +249,7 @@ export default function AnalyticsDashboard() {
 
 function SummaryCard({ label, value, valueClass = "text-yellow-400" }) {
   return (
-    <div className="bg-gray-900 rounded-xl p-6 text-center shadow-lg">
+    <div className="text-center">
       <div className="text-sm uppercase text-yellow-300 mb-2">{label}</div>
       <div className={`text-4xl font-extrabold ${valueClass}`}>{value}</div>
     </div>
@@ -220,7 +258,7 @@ function SummaryCard({ label, value, valueClass = "text-yellow-400" }) {
 
 function ChartCard({ title, children }) {
   return (
-    <div className="bg-gray-900 p-6 rounded-xl shadow-lg text-yellow-300">
+    <div className="bg-gray-800 rounded-xl p-6 shadow-lg text-yellow-300">
       <h2 className="text-xl font-semibold mb-4">{title}</h2>
       {children}
     </div>
