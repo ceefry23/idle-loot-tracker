@@ -79,13 +79,12 @@ export default function BossPage() {
   const totalLoss = totalSpent - totalProfit;
 
   return (
-    <div>
-<img
-  src="/images/idle_loot_tracker.png"
-  alt="Loot Tracker Banner"
-  className="w-full max-w-md mx-auto mb-6 rounded-xl shadow-lg"
-/>
-
+    <>
+      <img
+        src="/images/idle_loot_tracker.png"
+        alt="Idle Loot Tracker Banner"
+        className="w-full max-w-md mx-auto mb-6 rounded-xl shadow-lg"
+      />
 
       <CharacterManager
         characters={characters}
@@ -93,7 +92,6 @@ export default function BossPage() {
         removeCharacter={removeCharacter}
       />
 
-      {/* Log Boss Run */}
       <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6 mb-8">
         <h2 className="text-xl font-semibold mb-3 text-yellow-300">
           Log Boss Run
@@ -155,7 +153,6 @@ export default function BossPage() {
         </div>
       </div>
 
-      {/* Boss Runs Table */}
       <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xl font-semibold text-yellow-300">Boss Runs</h2>
@@ -277,7 +274,7 @@ export default function BossPage() {
                 <div className="text-lg text-yellow-400">${totalProfit.toLocaleString()}</div>
               </div>
               <div>
-                <div className="text-sm">Net Loss</div>
+                <div className="text-sm">Net</div>
                 <div className={`text-lg font-bold ${totalLoss > 0 ? "text-red-500" : "text-green-400"}`}>
                   ${totalLoss.toLocaleString()}
                 </div>
@@ -286,6 +283,6 @@ export default function BossPage() {
           </>
         )}
       </div>
-    </div>
+    </>
   );
 }

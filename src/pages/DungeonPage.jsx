@@ -71,19 +71,17 @@ export default function DungeonPage() {
     setFilterLoot("all");
   }
 
-  // Calculate totals from filtered runs
   const totalSpent = filteredRuns.reduce((sum, run) => sum + (run.cost ?? 0), 0);
   const totalProfit = filteredRuns.reduce((sum, run) => sum + (run.profit ?? 0), 0);
   const totalLoss = totalSpent - totalProfit;
 
   return (
-    <div>
-<img
-  src="/images/idle_loot_tracker.png"
-  alt="Loot Tracker Banner"
-  className="w-full max-w-md mx-auto mb-6 rounded-xl shadow-lg"
-/>
-
+    <>
+      <img
+        src="/images/idle_loot_tracker.png"
+        alt="Loot Tracker Banner"
+        className="w-full max-w-md mx-auto mb-6 rounded-xl shadow-lg"
+      />
 
       <CharacterManager
         characters={characters}
@@ -263,7 +261,7 @@ export default function DungeonPage() {
                 <div className="text-lg text-yellow-400">${totalProfit.toLocaleString()}</div>
               </div>
               <div>
-                <div className="text-sm">Net Loss</div>
+                <div className="text-sm">Net</div>
                 <div className={`text-lg font-bold ${totalLoss > 0 ? "text-red-500" : "text-green-400"}`}>
                   ${totalLoss.toLocaleString()}
                 </div>
@@ -272,6 +270,6 @@ export default function DungeonPage() {
           </>
         )}
       </div>
-    </div>
+    </>
   );
 }
