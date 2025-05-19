@@ -51,19 +51,19 @@ export default function DungeonPage() {
 
   const filteredRuns = runs.filter((run) => {
     if (filterCharacter && run.characterId !== filterCharacter) return false;
-    if (filterDungeon !== "all" && run.dungeon !== filterDungeon) return false;
+
+    if (filterDungeon !== "all" && run.dungeon !== filterDungeon) {
+      return false;
+    }
+
     if (filterLoot === "drops") {
       if (!run.loot || run.loot.length === 0) return false;
     } else if (filterLoot !== "all") {
       if (!run.loot || !run.loot.some((l) => l.name === filterLoot)) return false;
     }
+
     return true;
   });
-
-  // Sort newest runs first by date descending
-  const sortedRuns = useMemo(() => {
-    return [...filteredRuns].sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [filteredRuns]);
 
   function clearFilters() {
     setFilterCharacter("");
@@ -170,7 +170,7 @@ export default function DungeonPage() {
           )}
         </div>
 
-        {sortedRuns.length === 0 ? (
+        {filteredRuns.length === 0 ? (
           <div className="text-gray-500 py-4 text-center">
             No dungeon runs found.
           </div>
@@ -190,63 +190,76 @@ export default function DungeonPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedRuns.map((run) => (
-                    <tr
-                      key={run.id}
-                      className="border-b border-gray-800 hover:bg-yellow-900/10 transition"
-                    >
-                      <td className="py-2 px-4 text-yellow-200">
-                        {getCharacterName(run.characterId)}
-                      </td>
-                      <td className="py-2 px-4 text-yellow-100">{run.dungeon}</td>
-                      <td className="py-2 px-4 text-yellow-100">{run.cost ?? ""}</td>
-                      <td className="py-2 px-4">
-                        {!run.loot || run.loot.length === 0 ? (
-                          <span className="bg-gray-800 text-gray-400 px-2 py-1 rounded-full border border-gray-700 text-xs">
-                            None
-                          </span>
-                        ) : (
-                          run.loot.map((item) => (
-                            <span
-                              key={item.name}
-                              className={`inline-block mr-2 mb-1 px-2 py-1 rounded-full border text-xs align-middle ${rarityColors[item.rarity]}`}
-                              title={item.rarity}
-                            >
-                              {item.name}
-                              <span className="ml-1 opacity-80">({item.rarity})</span>
+                  {filteredRuns
+                    .slice()
+                    .sort((a, b) => {
+                      const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+                      if (dateDiff !== 0) return dateDiff;
+                      return b.id.localeCompare(a.id);
+                    })
+                    .map((run) => (
+                      <tr
+                        key={run.id}
+                        className="border-b border-gray-800 hover:bg-yellow-900/10 transition"
+                      >
+                        <td className="py-2 px-4 text-yellow-200">
+                          {getCharacterName(run.characterId)}
+                        </td>
+                        <td className="py-2 px-4 text-yellow-100">{run.dungeon}</td>
+                        <td className="py-2 px-4 text-yellow-100">{run.cost ?? ""}</td>
+                        <td className="py-2 px-4">
+                          {!run.loot || run.loot.length === 0 ? (
+                            <span className="bg-gray-800 text-gray-400 px-2 py-1 rounded-full border border-gray-700 text-xs">
+                              None
                             </span>
-                          ))
-                        )}
-                      </td>
-                      <td className="py-2 px-4">
-                        <input
-                          type="number"
-                          step="any"
-                          min="0"
-                          value={run.profit ?? ""}
-                          onChange={(e) => updateProfit(run.id, e.target.value)}
-                          className="w-20 rounded border border-yellow-600 bg-gray-800 px-2 py-1 text-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                          placeholder="Profit"
-                        />
-                      </td>
-                      <td className="py-2 px-4 text-gray-200">{run.date}</td>
-                      <td className="py-2 px-4">
-                        <button
-                          className="text-xs text-red-400 hover:text-red-200 underline"
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                "Are you sure you want to delete this entry?"
+                          ) : (
+                            run.loot.map((item) => (
+                              <span
+                                key={item.name}
+                                className={`inline-block mr-2 mb-1 px-2 py-1 rounded-full border text-xs align-middle ${rarityColors[item.rarity]}`}
+                                title={item.rarity}
+                              >
+                                {item.name}
+                                <span className="ml-1 opacity-80">({item.rarity})</span>
+                              </span>
+                            ))
+                          )}
+                        </td>
+                        <td className="py-2 px-4">
+                          <input
+                            type="number"
+                            step="any"
+                            min="0"
+                            value={run.profit ?? ""}
+                            onChange={(e) => updateProfit(run.id, e.target.value)}
+                            className="w-20 rounded border border-yellow-600 bg-gray-800 px-2 py-1 text-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                            placeholder="Profit"
+                          />
+                        </td>
+                        <td className="py-2 px-4 text-gray-200">
+                          {new Date(run.date).toLocaleDateString(undefined, {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </td>
+                        <td className="py-2 px-4">
+                          <button
+                            className="text-xs text-red-400 hover:text-red-200 underline"
+                            onClick={() => {
+                              if (
+                                window.confirm(
+                                  "Are you sure you want to delete this entry?"
+                                )
                               )
-                            )
-                              removeRun(run.id);
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                                removeRun(run.id);
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -255,15 +268,23 @@ export default function DungeonPage() {
             <div className="mt-6 p-4 rounded-xl bg-yellow-900 bg-opacity-20 text-yellow-300 font-semibold flex justify-around max-w-md mx-auto">
               <div>
                 <div className="text-sm">Total Spent</div>
-                <div className="text-lg text-yellow-400">${totalSpent.toLocaleString()}</div>
+                <div className="text-lg text-yellow-400">
+                  ${totalSpent.toLocaleString()}
+                </div>
               </div>
               <div>
                 <div className="text-sm">Total Profit</div>
-                <div className="text-lg text-yellow-400">${totalProfit.toLocaleString()}</div>
+                <div className="text-lg text-yellow-400">
+                  ${totalProfit.toLocaleString()}
+                </div>
               </div>
               <div>
                 <div className="text-sm">Net</div>
-                <div className={`text-lg font-bold ${totalLoss > 0 ? "text-red-500" : "text-green-400"}`}>
+                <div
+                  className={`text-lg font-bold ${
+                    totalLoss > 0 ? "text-red-500" : "text-green-400"
+                  }`}
+                >
                   ${totalLoss.toLocaleString()}
                 </div>
               </div>

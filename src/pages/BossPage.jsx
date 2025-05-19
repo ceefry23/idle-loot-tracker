@@ -79,10 +79,10 @@ export default function BossPage() {
   const totalLoss = totalSpent - totalProfit;
 
   return (
-    <>
+    <div>
       <img
         src="/images/idle_loot_tracker.png"
-        alt="Idle Loot Tracker Banner"
+        alt="Loot Tracker Banner"
         className="w-full max-w-md mx-auto mb-6 rounded-xl shadow-lg"
       />
 
@@ -93,13 +93,11 @@ export default function BossPage() {
       />
 
       <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6 mb-8">
-        <h2 className="text-xl font-semibold mb-3 text-yellow-300">
-          Log Boss Run
-        </h2>
+        <h2 className="text-xl font-semibold mb-3 text-yellow-300">Log Boss Run</h2>
         <BossForm characters={characters} onAddRun={addRun} />
       </div>
 
-      {/* Filters */}
+      {/* Filters with Clear Filters button aligned right */}
       <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
         <div className="flex flex-wrap gap-4">
           <select
@@ -173,9 +171,7 @@ export default function BossPage() {
         </div>
 
         {filteredRuns.length === 0 ? (
-          <div className="text-gray-500 py-4 text-center">
-            No boss runs found.
-          </div>
+          <div className="text-gray-500 py-4 text-center">No boss runs found.</div>
         ) : (
           <>
             <div className="overflow-x-auto">
@@ -192,73 +188,76 @@ export default function BossPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredRuns.map((run) => (
-                    <tr
-                      key={run.id}
-                      className="border-b border-gray-800 hover:bg-yellow-900/10 transition"
-                    >
-                      <td className="py-2 px-4 text-yellow-200">
-                        {getCharacterName(run.characterId)}
-                      </td>
-                      <td className="py-2 px-4 text-yellow-100">{run.boss}</td>
-                      <td className="py-2 px-4">
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={run.cost ?? ""}
-                          onChange={(e) => updateCost(run.id, e.target.value)}
-                          className="w-20 rounded border border-yellow-600 bg-gray-800 px-2 py-1 text-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                          placeholder="Cost"
-                        />
-                      </td>
-                      <td className="py-2 px-4">
-                        {!run.loot || run.loot.length === 0 ? (
-                          <span className="bg-gray-800 text-gray-400 px-2 py-1 rounded-full border border-gray-700 text-xs">
-                            None
-                          </span>
-                        ) : (
-                          run.loot.map((item) => (
-                            <span
-                              key={item.name}
-                              className={`inline-block mr-2 mb-1 px-2 py-1 rounded-full border text-xs align-middle ${rarityColors[item.rarity]}`}
-                              title={item.rarity}
-                            >
-                              {item.name}
-                              <span className="ml-1 opacity-80">({item.rarity})</span>
+                  {filteredRuns
+                    .slice()
+                    .sort((a, b) => {
+                      const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+                      if (dateDiff !== 0) return dateDiff;
+                      return b.id.localeCompare(a.id);
+                    })
+                    .map((run) => (
+                      <tr
+                        key={run.id}
+                        className="border-b border-gray-800 hover:bg-yellow-900/10 transition"
+                      >
+                        <td className="py-2 px-4 text-yellow-200">
+                          {getCharacterName(run.characterId)}
+                        </td>
+                        <td className="py-2 px-4 text-yellow-100">{run.boss}</td>
+                        <td className="py-2 px-4 text-yellow-100">{run.cost ?? ""}</td>
+                        <td className="py-2 px-4">
+                          {!run.loot || run.loot.length === 0 ? (
+                            <span className="bg-gray-800 text-gray-400 px-2 py-1 rounded-full border border-gray-700 text-xs">
+                              None
                             </span>
-                          ))
-                        )}
-                      </td>
-                      <td className="py-2 px-4">
-                        <input
-                          type="number"
-                          step="any"
-                          min="0"
-                          value={run.profit ?? ""}
-                          onChange={(e) => updateProfit(run.id, e.target.value)}
-                          className="w-20 rounded border border-yellow-600 bg-gray-800 px-2 py-1 text-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                          placeholder="Profit"
-                        />
-                      </td>
-                      <td className="py-2 px-4 text-gray-200">{run.date}</td>
-                      <td className="py-2 px-4">
-                        <button
-                          className="text-xs text-red-400 hover:text-red-200 underline"
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                "Are you sure you want to delete this entry?"
+                          ) : (
+                            run.loot.map((item) => (
+                              <span
+                                key={item.name}
+                                className={`inline-block mr-2 mb-1 px-2 py-1 rounded-full border text-xs align-middle ${rarityColors[item.rarity]}`}
+                                title={item.rarity}
+                              >
+                                {item.name}
+                                <span className="ml-1 opacity-80">({item.rarity})</span>
+                              </span>
+                            ))
+                          )}
+                        </td>
+                        <td className="py-2 px-4">
+                          <input
+                            type="number"
+                            step="any"
+                            min="0"
+                            value={run.profit ?? ""}
+                            onChange={(e) => updateProfit(run.id, e.target.value)}
+                            className="w-20 rounded border border-yellow-600 bg-gray-800 px-2 py-1 text-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                            placeholder="Profit"
+                          />
+                        </td>
+                        <td className="py-2 px-4 text-gray-200">
+                          {new Date(run.date).toLocaleDateString(undefined, {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </td>
+                        <td className="py-2 px-4">
+                          <button
+                            className="text-xs text-red-400 hover:text-red-200 underline"
+                            onClick={() => {
+                              if (
+                                window.confirm(
+                                  "Are you sure you want to delete this entry?"
+                                )
                               )
-                            )
-                              removeRun(run.id);
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                                removeRun(run.id);
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -283,6 +282,6 @@ export default function BossPage() {
           </>
         )}
       </div>
-    </>
+    </div>
   );
 }
