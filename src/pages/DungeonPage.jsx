@@ -51,19 +51,19 @@ export default function DungeonPage() {
 
   const filteredRuns = runs.filter((run) => {
     if (filterCharacter && run.characterId !== filterCharacter) return false;
-
-    if (filterDungeon !== "all" && run.dungeon !== filterDungeon) {
-      return false;
-    }
-
+    if (filterDungeon !== "all" && run.dungeon !== filterDungeon) return false;
     if (filterLoot === "drops") {
       if (!run.loot || run.loot.length === 0) return false;
     } else if (filterLoot !== "all") {
       if (!run.loot || !run.loot.some((l) => l.name === filterLoot)) return false;
     }
-
     return true;
   });
+
+  // Sort newest runs first by date descending
+  const sortedRuns = useMemo(() => {
+    return [...filteredRuns].sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [filteredRuns]);
 
   function clearFilters() {
     setFilterCharacter("");
@@ -71,12 +71,13 @@ export default function DungeonPage() {
     setFilterLoot("all");
   }
 
+  // Calculate totals from filtered runs
   const totalSpent = filteredRuns.reduce((sum, run) => sum + (run.cost ?? 0), 0);
   const totalProfit = filteredRuns.reduce((sum, run) => sum + (run.profit ?? 0), 0);
   const totalLoss = totalSpent - totalProfit;
 
   return (
-    <>
+    <div>
       <img
         src="/images/idle_loot_tracker.png"
         alt="Loot Tracker Banner"
@@ -169,7 +170,7 @@ export default function DungeonPage() {
           )}
         </div>
 
-        {filteredRuns.length === 0 ? (
+        {sortedRuns.length === 0 ? (
           <div className="text-gray-500 py-4 text-center">
             No dungeon runs found.
           </div>
@@ -189,7 +190,7 @@ export default function DungeonPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredRuns.map((run) => (
+                  {sortedRuns.map((run) => (
                     <tr
                       key={run.id}
                       className="border-b border-gray-800 hover:bg-yellow-900/10 transition"
@@ -270,6 +271,6 @@ export default function DungeonPage() {
           </>
         )}
       </div>
-    </>
+    </div>
   );
 }

@@ -26,17 +26,24 @@ export default function DungeonForm({ characters, onAddRun }) {
   function handleSubmit(e) {
     e.preventDefault();
     if (characterId && dungeon && date) {
+      // Combine the selected date (yyyy-mm-dd) with the current time (HH:mm:ss)
+      const now = new Date();
+      const timeString = now.toTimeString().split(" ")[0]; // "HH:mm:ss"
+      const fullDateTime = `${date}T${timeString}`;
+
       const lootObjects = loot === "None" ? [] : currentLoot.filter((item) => item.name === loot);
       onAddRun({
         characterId,
         dungeon,
         cost: currentDungeon ? currentDungeon.cost : 0,
-        date,
+        date: fullDateTime, // store full datetime string here
         loot: lootObjects,
         profit: 0,
       });
       setDate(getTodayString());
       setLoot("None");
+      setCharacterId("");
+      setDungeon("");
     }
   }
 

@@ -126,6 +126,11 @@ export default function BossForm({ characters, onAddRun }) {
     const bossEntry = bossDB.find((b) => b.name === boss);
     const cost = bossEntry ? bossEntry.cost : 0;
 
+    // Combine selected date with current time for full ISO datetime string
+    const now = new Date();
+    const timeString = now.toTimeString().split(" ")[0]; // "HH:mm:ss"
+    const fullDateTime = `${date}T${timeString}`;
+
     const run = {
       id: uuidv4(),
       characterId,
@@ -133,7 +138,7 @@ export default function BossForm({ characters, onAddRun }) {
       cost,
       loot: loot.length ? loot : [],
       profit: 0,
-      date,
+      date: fullDateTime,
     };
 
     onAddRun(run);
