@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import useCharacters from "../hooks/useCharacters";
 import useDungeonRuns from "../hooks/useDungeonRuns";
 import CharacterManager from "../components/Character/CharacterManager";
@@ -16,19 +17,58 @@ export default function DungeonPage() {
   const { characters, addCharacter, removeCharacter } = useCharacters();
   const { runs, addRun, removeRun, clearRuns, setRuns } = useDungeonRuns();
 
-  // Helper to get character name from id
+  const [filterCharacter, setFilterCharacter] = useState("");
+  const [filterDungeon, setFilterDungeon] = useState("all");
+  const [filterLoot, setFilterLoot] = useState("all");
+
   function getCharacterName(id) {
     const found = characters.find((c) => c.id === id);
     return found ? found.name : "Unknown";
   }
 
-  // Update profit for a run by id
   function updateProfit(id, value) {
     setRuns((prevRuns) =>
       prevRuns.map((run) =>
         run.id === id ? { ...run, profit: parseFloat(value) || 0 } : run
       )
     );
+  }
+
+  const dungeonsRun = useMemo(() => {
+    const runDungeons = new Set(runs.map((r) => r.dungeon));
+    return Array.from(runDungeons);
+  }, [runs]);
+
+  const uniqueLoots = useMemo(() => {
+    const lootSet = new Set();
+    runs.forEach((run) => {
+      if (run.loot && run.loot.length) {
+        run.loot.forEach((item) => lootSet.add(item.name));
+      }
+    });
+    return Array.from(lootSet);
+  }, [runs]);
+
+  const filteredRuns = runs.filter((run) => {
+    if (filterCharacter && run.characterId !== filterCharacter) return false;
+
+    if (filterDungeon !== "all" && run.dungeon !== filterDungeon) {
+      return false;
+    }
+
+    if (filterLoot === "drops") {
+      if (!run.loot || run.loot.length === 0) return false;
+    } else if (filterLoot !== "all") {
+      if (!run.loot || !run.loot.some((l) => l.name === filterLoot)) return false;
+    }
+
+    return true;
+  });
+
+  function clearFilters() {
+    setFilterCharacter("");
+    setFilterDungeon("all");
+    setFilterLoot("all");
   }
 
   return (
@@ -50,6 +90,60 @@ export default function DungeonPage() {
         <DungeonForm characters={characters} onAddRun={addRun} />
       </div>
 
+      {/* Filters with Clear Filters button aligned right */}
+      <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
+        <div className="flex flex-wrap gap-4">
+          <select
+            value={filterCharacter}
+            onChange={(e) => setFilterCharacter(e.target.value)}
+            className="border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-4 py-2"
+          >
+            <option value="">All Characters</option>
+            {characters.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filterDungeon}
+            onChange={(e) => setFilterDungeon(e.target.value)}
+            className="border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-4 py-2"
+          >
+            <option value="all">All Dungeons</option>
+            {dungeonsRun.map((dungeonName) => (
+              <option key={dungeonName} value={dungeonName}>
+                {dungeonName}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filterLoot}
+            onChange={(e) => setFilterLoot(e.target.value)}
+            className="border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-4 py-2"
+          >
+            <option value="all">All Runs</option>
+            <option value="drops">Runs With Loot</option>
+            {uniqueLoots.map((loot) => (
+              <option key={loot} value={loot}>
+                {loot}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <button
+            onClick={clearFilters}
+            className="px-4 py-2 rounded-xl bg-yellow-500 text-gray-900 font-semibold hover:bg-yellow-400 transition"
+          >
+            Clear Filters
+          </button>
+        </div>
+      </div>
+
       <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xl font-semibold text-yellow-300">Dungeon Runs</h2>
@@ -69,9 +163,9 @@ export default function DungeonPage() {
           )}
         </div>
 
-        {runs.length === 0 ? (
+        {filteredRuns.length === 0 ? (
           <div className="text-gray-500 py-4 text-center">
-            No dungeon runs logged yet.
+            No dungeon runs found.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -88,7 +182,7 @@ export default function DungeonPage() {
                 </tr>
               </thead>
               <tbody>
-                {runs.map((run) => (
+                {filteredRuns.map((run) => (
                   <tr
                     key={run.id}
                     className="border-b border-gray-800 hover:bg-yellow-900/10 transition"
