@@ -9,6 +9,7 @@ function AverageRunsPerDrop({ runs, type }) {
   }, [runs, type]);
 
   const [selectedEntity, setSelectedEntity] = useState(uniqueEntities[0] || "");
+  const [selectedDrop, setSelectedDrop] = useState("any");
 
   const averageRunsPerDrop = useMemo(() => {
     if (!selectedEntity) return null;
@@ -19,33 +20,63 @@ function AverageRunsPerDrop({ runs, type }) {
 
     const totalRuns = filteredRuns.length;
 
-    const dropCounts = {};
-    filteredRuns.forEach((run) => {
+    if (selectedDrop === "any") {
+      // Count total runs and runs with any drop
+      const dropRunsCount = filteredRuns.filter((run) => run.loot && run.loot.length > 0).length;
+      return {
+        totalRuns,
+        averages: [
+          {
+            item: "Any Drop",
+            avgRunsPerDrop: dropRunsCount ? (totalRuns / dropRunsCount).toFixed(2) : "N/A",
+          },
+        ],
+      };
+    } else {
+      // Specific drop item
+      const dropCounts = {};
+      filteredRuns.forEach((run) => {
+        if (run.loot && run.loot.length) {
+          run.loot.forEach(({ name }) => {
+            dropCounts[name] = (dropCounts[name] || 0) + 1;
+          });
+        }
+      });
+
+      const count = dropCounts[selectedDrop] || 0;
+
+      return {
+        totalRuns,
+        averages: [
+          {
+            item: selectedDrop,
+            avgRunsPerDrop: count ? (totalRuns / count).toFixed(2) : "N/A",
+          },
+        ],
+      };
+    }
+  }, [runs, selectedEntity, selectedDrop, type]);
+
+  const allLootItems = useMemo(() => {
+    const lootSet = new Set();
+    runs.forEach((run) => {
       if (run.loot && run.loot.length) {
-        run.loot.forEach(({ name }) => {
-          dropCounts[name] = (dropCounts[name] || 0) + 1;
-        });
+        run.loot.forEach(({ name }) => lootSet.add(name));
       }
     });
-
-    const averages = Object.entries(dropCounts).map(([item, count]) => ({
-      item,
-      avgRunsPerDrop: (totalRuns / count).toFixed(2),
-    }));
-
-    return { totalRuns, averages };
-  }, [runs, selectedEntity, type]);
+    return Array.from(lootSet);
+  }, [runs]);
 
   if (!selectedEntity) return <div className="text-yellow-300">No {type}s found.</div>;
 
   return (
-    <div className="mt-6 p-4 rounded-xl bg-yellow-900 bg-opacity-20 text-yellow-300 flex-1">
+    <div className="mt-6 p-4 rounded-xl bg-gray-800 bg-opacity-40 text-yellow-300 flex-1">
       <label className="block mb-2 font-semibold">
         Select {type.charAt(0).toUpperCase() + type.slice(1)}:
         <select
           value={selectedEntity}
           onChange={(e) => setSelectedEntity(e.target.value)}
-          className="ml-2 bg-gray-800 text-yellow-200 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+          className="ml-2 bg-gray-900 text-yellow-200 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-yellow-400"
         >
           {uniqueEntities.map((entity) => (
             <option key={entity} value={entity}>
@@ -54,11 +85,28 @@ function AverageRunsPerDrop({ runs, type }) {
           ))}
         </select>
       </label>
+
+      <label className="block mb-4 font-semibold">
+        Select Drop:
+        <select
+          value={selectedDrop}
+          onChange={(e) => setSelectedDrop(e.target.value)}
+          className="ml-2 bg-gray-900 text-yellow-200 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+        >
+          <option value="any">Any Drop</option>
+          {allLootItems.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </select>
+      </label>
+
       <div>
         <div>Total Runs: {averageRunsPerDrop.totalRuns}</div>
         <div className="mt-2 font-semibold">Average Runs per Drop:</div>
-        {averageRunsPerDrop.averages.length === 0 ? (
-          <div>No drops recorded for this {type}.</div>
+        {averageRunsPerDrop.averages[0].avgRunsPerDrop === "N/A" ? (
+          <div>No drops recorded for this selection.</div>
         ) : (
           <ul className="list-disc list-inside max-h-48 overflow-y-auto">
             {averageRunsPerDrop.averages.map(({ item, avgRunsPerDrop }) => (
@@ -84,15 +132,12 @@ function RunsWithoutDrop({ runs, type }) {
   const stats = useMemo(() => {
     if (!selectedEntity) return null;
 
-    // Filter runs by selected entity and sort by date ascending (assuming run.date is ISO string)
+    // Filter runs by selected entity and sort by date ascending
     const filteredRuns = runs
       .filter((r) => (type === "dungeon" ? r.dungeon === selectedEntity : r.boss === selectedEntity))
       .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    // Count total runs without loot drops
-    const runsWithoutDropCount = filteredRuns.filter(run => !run.loot || run.loot.length === 0).length;
-
-    // Find longest consecutive runs without drops
+    // Calculate longest streak historically
     let longestStreak = 0;
     let currentStreak = 0;
 
@@ -105,19 +150,29 @@ function RunsWithoutDrop({ runs, type }) {
       }
     });
 
-    return { runsWithoutDropCount, longestStreak };
+    // Calculate current streak from most recent runs backward
+    let currentRunsWithoutDrop = 0;
+    for (let i = filteredRuns.length - 1; i >= 0; i--) {
+      if (!filteredRuns[i].loot || filteredRuns[i].loot.length === 0) {
+        currentRunsWithoutDrop++;
+      } else {
+        break;
+      }
+    }
+
+    return { currentRunsWithoutDrop, longestStreak };
   }, [runs, selectedEntity, type]);
 
   if (!selectedEntity) return <div className="text-yellow-300">No {type}s found.</div>;
 
   return (
-    <div className="mt-6 p-4 rounded-xl bg-yellow-900 bg-opacity-20 text-yellow-300 flex-1">
+    <div className="mt-6 p-4 rounded-xl bg-gray-800 bg-opacity-40 text-yellow-300 flex-1">
       <label className="block mb-2 font-semibold">
         Select {type.charAt(0).toUpperCase() + type.slice(1)}:
         <select
           value={selectedEntity}
           onChange={(e) => setSelectedEntity(e.target.value)}
-          className="ml-2 bg-gray-800 text-yellow-200 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+          className="ml-2 bg-gray-900 text-yellow-200 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-yellow-400"
         >
           {uniqueEntities.map((entity) => (
             <option key={entity} value={entity}>
@@ -127,8 +182,8 @@ function RunsWithoutDrop({ runs, type }) {
         </select>
       </label>
       <div>
-        <div>Total Runs Without Drop: {stats.runsWithoutDropCount}</div>
-        <div>Longest Run Without Drop: {stats.longestStreak}</div>
+        <div>Current Runs Without a Drop: {stats.currentRunsWithoutDrop}</div>
+        <div>Longest Run Without a Drop: {stats.longestStreak}</div>
       </div>
     </div>
   );
