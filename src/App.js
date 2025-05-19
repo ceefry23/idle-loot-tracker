@@ -12,7 +12,7 @@ function App() {
     // ONLY dark classes below
     <div className="min-h-screen bg-gray-950 flex flex-col transition-colors">
       {/* ThemeToggle REMOVED */}
-      <div className="flex-1 w-full max-w-2xl mx-auto pt-8 pb-32 px-4">
+      <div className="flex-1 w-full max-w-4xl mx-auto pt-8 pb-32 px-4">
         {tab === "dungeons" && <DungeonPage />}
         {tab === "bosses" && <BossPage />}
         {tab === "analytics" && <AnalyticsPage />}
