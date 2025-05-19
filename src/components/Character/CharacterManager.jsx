@@ -11,6 +11,12 @@ export default function CharacterManager({ characters, addCharacter, removeChara
     }
   }
 
+  function handleDelete(id, name) {
+    if (window.confirm(`Are you sure you want to delete character "${name}"?`)) {
+      removeCharacter(id);
+    }
+  }
+
   return (
     <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6 mb-8">
       <h2 className="text-xl font-semibold mb-3 text-yellow-300">Characters</h2>
@@ -35,7 +41,7 @@ export default function CharacterManager({ characters, addCharacter, removeChara
           <li key={c.id} className="flex justify-between items-center border-b border-gray-800 last:border-b-0 py-1">
             <span className="text-yellow-200">{c.name}</span>
             <button
-              onClick={() => removeCharacter(c.id)}
+              onClick={() => handleDelete(c.id, c.name)}
               className="text-red-400 hover:text-red-200 text-xs px-2 py-1 rounded transition"
               title="Delete character"
             >

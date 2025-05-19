@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
+import dungeons from "../../data/DungeonDB"; // import your dungeon database
 import CharacterDropdown from "../Character/CharacterDropdown";
 
-// Utility: today's date in YYYY-MM-DD format
 function getTodayString() {
   const today = new Date();
   const yyyy = today.getFullYear();
@@ -10,102 +10,34 @@ function getTodayString() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-const DUNGEONS = [
-  {
-    name: "Forgotten Crypt",
-    loot: [
-      { name: "Ancient Sword", rarity: "Rare" },
-      { name: "Tarnished Amulet", rarity: "Common" },
-      { name: "Bone Shield", rarity: "Uncommon" },
-      { name: "Cryptic Relic", rarity: "Mythic" }
-    ]
-  },
-  {
-    name: "Spider Cavern",
-    loot: [
-      { name: "Spider Silk", rarity: "Uncommon" },
-      { name: "Venom Gland", rarity: "Rare" },
-      { name: "Web Cloak", rarity: "Epic" }
-    ]
-  },
-  {
-    name: "Lost Library",
-    loot: [
-      { name: "Dusty Tome", rarity: "Common" },
-      { name: "Enchanted Quill", rarity: "Rare" },
-      { name: "Mystic Bookmark", rarity: "Epic" }
-    ]
-  },
-  {
-    name: "Dragon's Lair",
-    loot: [
-      { name: "Dragon Scale", rarity: "Epic" },
-      { name: "Flame Gem", rarity: "Rare" },
-      { name: "Golden Claw", rarity: "Legendary" },
-      { name: "Eternal Heart", rarity: "Mythic" }
-    ]
-  }
-];
-
-const LAST_CHARACTER_KEY = "idle_loot_last_character";
-const LAST_DUNGEON_KEY = "idle_loot_last_dungeon";
-
 export default function DungeonForm({ characters, onAddRun }) {
-  // Load last-used character and dungeon from localStorage if available
-  const [characterId, setCharacterId] = useState(() => localStorage.getItem(LAST_CHARACTER_KEY) || "");
-  const [dungeon, setDungeon] = useState(() => localStorage.getItem(LAST_DUNGEON_KEY) || "");
+  const [characterId, setCharacterId] = useState("");
+  const [dungeon, setDungeon] = useState("");
   const [loot, setLoot] = useState("None");
   const [date, setDate] = useState(getTodayString());
 
-  const currentLoot = DUNGEONS.find((d) => d.name === dungeon)?.loot ?? [];
+  const currentDungeon = dungeons.find((d) => d.name === dungeon);
+  const currentLoot = currentDungeon?.loot ?? [];
 
-  // Persist character selection
   useEffect(() => {
-    if (characterId) {
-      localStorage.setItem(LAST_CHARACTER_KEY, characterId);
-    }
-  }, [characterId]);
-
-  // Persist dungeon selection and reset loot to "None"
-  useEffect(() => {
-    if (dungeon) {
-      localStorage.setItem(LAST_DUNGEON_KEY, dungeon);
-    }
     setLoot("None");
   }, [dungeon]);
 
   function handleSubmit(e) {
     e.preventDefault();
     if (characterId && dungeon && date) {
-      // Save loot as an array for consistency
-      const lootObjects =
-        loot === "None"
-          ? []
-          : currentLoot.filter((item) => item.name === loot);
+      const lootObjects = loot === "None" ? [] : currentLoot.filter((item) => item.name === loot);
       onAddRun({
         characterId,
         dungeon,
+        cost: currentDungeon ? currentDungeon.cost : 0,
         date,
         loot: lootObjects,
+        profit: 0,
       });
-      // Don't reset character/dungeon, but reset loot and date
       setDate(getTodayString());
       setLoot("None");
     }
-  }
-
-  function handleCharacterChange(id) {
-    setCharacterId(id);
-    localStorage.setItem(LAST_CHARACTER_KEY, id);
-  }
-
-  function handleDungeonChange(e) {
-    setDungeon(e.target.value);
-    localStorage.setItem(LAST_DUNGEON_KEY, e.target.value);
-  }
-
-  function handleLootChange(e) {
-    setLoot(e.target.value || "None");
   }
 
   return (
@@ -113,31 +45,31 @@ export default function DungeonForm({ characters, onAddRun }) {
       <CharacterDropdown
         characters={characters}
         value={characterId}
-        onChange={handleCharacterChange}
+        onChange={setCharacterId}
       />
 
-      {/* Dungeon Dropdown */}
       <select
-        className="border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition-all"
+        className="border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-4 py-2
+          focus:ring-2 focus:ring-yellow-400 outline-none transition-all"
         value={dungeon}
-        onChange={handleDungeonChange}
+        onChange={(e) => setDungeon(e.target.value)}
         required
       >
         <option value="" disabled>
           Select dungeon...
         </option>
-        {DUNGEONS.map((d) => (
+        {dungeons.map((d) => (
           <option key={d.name} value={d.name}>
-            {d.name}
+            {d.name} (Cost: {d.cost})
           </option>
         ))}
       </select>
 
-      {/* Loot Dropdown - Single select only */}
       <select
-        className="border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition-all"
+        className="border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-4 py-2
+          focus:ring-2 focus:ring-yellow-400 outline-none transition-all"
         value={loot}
-        onChange={handleLootChange}
+        onChange={(e) => setLoot(e.target.value || "None")}
         disabled={!dungeon}
       >
         <option value="None">None</option>
@@ -148,18 +80,19 @@ export default function DungeonForm({ characters, onAddRun }) {
         ))}
       </select>
 
-      {/* Date Input */}
       <input
-        className="border border-yellow-500 bg-gray-900 text-yellow-200 placeholder-yellow-600 rounded-xl px-4 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition-all"
+        className="border border-yellow-500 bg-gray-900 text-yellow-200 placeholder-yellow-600 rounded-xl px-4 py-2
+          focus:ring-2 focus:ring-yellow-400 outline-none transition-all"
         type="date"
         value={date}
-        onChange={e => setDate(e.target.value)}
+        onChange={(e) => setDate(e.target.value)}
         required
       />
 
       <button
-        className="bg-yellow-400 text-gray-900 font-bold px-4 py-2 rounded-xl shadow border border-yellow-400 hover:bg-yellow-300 active:scale-95 transition-all mt-2"
         type="submit"
+        className="bg-yellow-400 text-gray-900 font-bold px-4 py-2 rounded-xl shadow border border-yellow-400
+          hover:bg-yellow-300 active:scale-95 transition-all mt-2"
       >
         Add Dungeon Run
       </button>
