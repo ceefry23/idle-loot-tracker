@@ -78,9 +78,12 @@ export default function DungeonPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-extrabold mb-6 text-yellow-400 drop-shadow">
-        Dungeons
-      </h1>
+<img
+  src="/images/idle_loot_tracker.png"
+  alt="Loot Tracker Banner"
+  className="w-full max-w-md mx-auto mb-6 rounded-xl shadow-lg"
+/>
+
 
       <CharacterManager
         characters={characters}
