@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import useDungeonRuns from "../hooks/useDungeonRuns";
 import useBossRuns from "../hooks/useBossRuns";
 
@@ -8,8 +8,30 @@ function AverageRunsPerDrop({ runs, type }) {
     return Array.from(set);
   }, [runs, type]);
 
-  const [selectedEntity, setSelectedEntity] = useState(uniqueEntities[0] || "");
+  const allLootItems = useMemo(() => {
+    const lootSet = new Set();
+    runs.forEach((run) => {
+      if (run.loot && run.loot.length) {
+        run.loot.forEach(({ name }) => lootSet.add(name));
+      }
+    });
+    return Array.from(lootSet);
+  }, [runs]);
+
+  const [selectedEntity, setSelectedEntity] = useState("");
   const [selectedDrop, setSelectedDrop] = useState("any");
+
+  // Initialize selectedEntity when uniqueEntities changes
+  useEffect(() => {
+    if (uniqueEntities.length > 0 && !uniqueEntities.includes(selectedEntity)) {
+      setSelectedEntity(uniqueEntities[0]);
+    }
+  }, [uniqueEntities, selectedEntity]);
+
+  // Reset selectedDrop to "any" when loot items change
+  useEffect(() => {
+    setSelectedDrop("any");
+  }, [allLootItems]);
 
   const averageRunsPerDrop = useMemo(() => {
     if (!selectedEntity) return null;
@@ -21,7 +43,6 @@ function AverageRunsPerDrop({ runs, type }) {
     const totalRuns = filteredRuns.length;
 
     if (selectedDrop === "any") {
-      // Count total runs and runs with any drop
       const dropRunsCount = filteredRuns.filter((run) => run.loot && run.loot.length > 0).length;
       return {
         totalRuns,
@@ -33,7 +54,6 @@ function AverageRunsPerDrop({ runs, type }) {
         ],
       };
     } else {
-      // Specific drop item
       const dropCounts = {};
       filteredRuns.forEach((run) => {
         if (run.loot && run.loot.length) {
@@ -56,16 +76,6 @@ function AverageRunsPerDrop({ runs, type }) {
       };
     }
   }, [runs, selectedEntity, selectedDrop, type]);
-
-  const allLootItems = useMemo(() => {
-    const lootSet = new Set();
-    runs.forEach((run) => {
-      if (run.loot && run.loot.length) {
-        run.loot.forEach(({ name }) => lootSet.add(name));
-      }
-    });
-    return Array.from(lootSet);
-  }, [runs]);
 
   if (!selectedEntity) return <div className="text-yellow-300">No {type}s found.</div>;
 
@@ -127,17 +137,22 @@ function RunsWithoutDrop({ runs, type }) {
     return Array.from(set);
   }, [runs, type]);
 
-  const [selectedEntity, setSelectedEntity] = useState(uniqueEntities[0] || "");
+  const [selectedEntity, setSelectedEntity] = useState("");
+
+  // Initialize selectedEntity when uniqueEntities changes
+  useEffect(() => {
+    if (uniqueEntities.length > 0 && !uniqueEntities.includes(selectedEntity)) {
+      setSelectedEntity(uniqueEntities[0]);
+    }
+  }, [uniqueEntities, selectedEntity]);
 
   const stats = useMemo(() => {
     if (!selectedEntity) return null;
 
-    // Filter runs by selected entity and sort by date ascending
     const filteredRuns = runs
       .filter((r) => (type === "dungeon" ? r.dungeon === selectedEntity : r.boss === selectedEntity))
       .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    // Calculate longest streak historically
     let longestStreak = 0;
     let currentStreak = 0;
 
@@ -150,7 +165,6 @@ function RunsWithoutDrop({ runs, type }) {
       }
     });
 
-    // Calculate current streak from most recent runs backward
     let currentRunsWithoutDrop = 0;
     for (let i = filteredRuns.length - 1; i >= 0; i--) {
       if (!filteredRuns[i].loot || filteredRuns[i].loot.length === 0) {
