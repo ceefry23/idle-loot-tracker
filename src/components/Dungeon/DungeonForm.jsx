@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import dungeons from "../../data/DungeonDB"; // import your dungeon database
+import dungeons from "../../data/DungeonDB"; // your dungeon database
 import CharacterDropdown from "../Character/CharacterDropdown";
 
 function getTodayString() {
@@ -10,8 +10,8 @@ function getTodayString() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-export default function DungeonForm({ characters, onAddRun }) {
-  const [characterId, setCharacterId] = useState("");
+export default function DungeonForm({ characters, onAddRun, defaultCharacterId = "" }) {
+  const [characterId, setCharacterId] = useState(defaultCharacterId);
   const [dungeon, setDungeon] = useState("");
   const [loot, setLoot] = useState("None");
   const [date, setDate] = useState(getTodayString());
@@ -23,12 +23,16 @@ export default function DungeonForm({ characters, onAddRun }) {
     setLoot("None");
   }, [dungeon]);
 
+  // Sync characterId if defaultCharacterId changes externally
+  useEffect(() => {
+    setCharacterId(defaultCharacterId);
+  }, [defaultCharacterId]);
+
   function handleSubmit(e) {
     e.preventDefault();
     if (characterId && dungeon && date) {
-      // Combine the selected date (yyyy-mm-dd) with the current time (HH:mm:ss)
       const now = new Date();
-      const timeString = now.toTimeString().split(" ")[0]; // "HH:mm:ss"
+      const timeString = now.toTimeString().split(" ")[0];
       const fullDateTime = `${date}T${timeString}`;
 
       const lootObjects = loot === "None" ? [] : currentLoot.filter((item) => item.name === loot);
@@ -36,13 +40,13 @@ export default function DungeonForm({ characters, onAddRun }) {
         characterId,
         dungeon,
         cost: currentDungeon ? currentDungeon.cost : 0,
-        date: fullDateTime, // store full datetime string here
+        date: fullDateTime,
         loot: lootObjects,
         profit: 0,
       });
       setDate(getTodayString());
       setLoot("None");
-      setCharacterId("");
+      // Do NOT clear characterId to keep selection
       setDungeon("");
     }
   }

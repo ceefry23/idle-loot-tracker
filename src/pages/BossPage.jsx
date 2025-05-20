@@ -17,6 +17,9 @@ export default function BossPage() {
   const { characters, addCharacter, removeCharacter } = useCharacters();
   const { runs, addRun, removeRun, clearRuns, setRuns } = useBossRuns();
 
+  const [lastCharacterId, setLastCharacterId] = useState("");
+  const [lastBoss, setLastBoss] = useState("");
+
   const [filterCharacter, setFilterCharacter] = useState("");
   const [filterBoss, setFilterBoss] = useState("all");
   const [filterLoot, setFilterLoot] = useState("all");
@@ -78,6 +81,12 @@ export default function BossPage() {
   const totalProfit = filteredRuns.reduce((sum, run) => sum + (run.profit ?? 0), 0);
   const totalLoss = totalSpent - totalProfit;
 
+  function handleAddRun(run) {
+    addRun(run);
+    setLastCharacterId(run.characterId);
+    setLastBoss(run.boss);
+  }
+
   return (
     <div>
       <img
@@ -94,7 +103,12 @@ export default function BossPage() {
 
       <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6 mb-8">
         <h2 className="text-xl font-semibold mb-3 text-yellow-300">Log Boss Run</h2>
-        <BossForm characters={characters} onAddRun={addRun} />
+        <BossForm
+          characters={characters}
+          onAddRun={handleAddRun}
+          defaultCharacterId={lastCharacterId}
+          defaultBoss={lastBoss}
+        />
       </div>
 
       {/* Filters with Clear Filters button aligned right */}
@@ -204,7 +218,16 @@ export default function BossPage() {
                           {getCharacterName(run.characterId)}
                         </td>
                         <td className="py-2 px-4 text-yellow-100">{run.boss}</td>
-                        <td className="py-2 px-4 text-yellow-100">{run.cost ?? ""}</td>
+                        <td className="py-2 px-4">
+                          <input
+                            type="number"
+                            min="0"
+                            value={run.cost ?? ""}
+                            onChange={(e) => updateCost(run.id, e.target.value)}
+                            className="w-20 rounded border border-yellow-600 bg-gray-800 px-2 py-1 text-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                            placeholder="Cost"
+                          />
+                        </td>
                         <td className="py-2 px-4">
                           {!run.loot || run.loot.length === 0 ? (
                             <span className="bg-gray-800 text-gray-400 px-2 py-1 rounded-full border border-gray-700 text-xs">

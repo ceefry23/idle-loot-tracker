@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 
-// Example boss database (replace with your actual boss data or import from a file)
 const bossDB = [
   {
     name: "Fire Beast",
@@ -33,12 +32,10 @@ const rarityColors = {
   Mythic: "bg-orange-600 text-orange-100 border-orange-300 font-extrabold",
 };
 
-// Custom LootDropdown component
 function LootDropdown({ boss, loot, setLoot }) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Close dropdown on outside click
   useEffect(() => {
     function handleClickOutside(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -108,16 +105,19 @@ function LootDropdown({ boss, loot, setLoot }) {
   );
 }
 
-export default function BossForm({ characters, onAddRun }) {
-  const [characterId, setCharacterId] = useState("");
+export default function BossForm({ characters, onAddRun, defaultCharacterId = "" }) {
+  const [characterId, setCharacterId] = useState(defaultCharacterId);
   const [boss, setBoss] = useState("");
   const [loot, setLoot] = useState([]);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
 
   useEffect(() => {
-    // Reset loot when boss changes
     setLoot([]);
   }, [boss]);
+
+  useEffect(() => {
+    setCharacterId(defaultCharacterId);
+  }, [defaultCharacterId]);
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -126,9 +126,8 @@ export default function BossForm({ characters, onAddRun }) {
     const bossEntry = bossDB.find((b) => b.name === boss);
     const cost = bossEntry ? bossEntry.cost : 0;
 
-    // Combine selected date with current time for full ISO datetime string
     const now = new Date();
-    const timeString = now.toTimeString().split(" ")[0]; // "HH:mm:ss"
+    const timeString = now.toTimeString().split(" ")[0];
     const fullDateTime = `${date}T${timeString}`;
 
     const run = {
@@ -143,11 +142,11 @@ export default function BossForm({ characters, onAddRun }) {
 
     onAddRun(run);
 
-    // Reset form
-    setCharacterId("");
+    // Reset form but keep character selected
     setBoss("");
     setLoot([]);
     setDate(new Date().toISOString().slice(0, 10));
+    // Do NOT clear characterId
   }
 
   return (

@@ -17,6 +17,7 @@ export default function DungeonPage() {
   const { characters, addCharacter, removeCharacter } = useCharacters();
   const { runs, addRun, removeRun, clearRuns, setRuns } = useDungeonRuns();
 
+  const [selectedCharacterId, setSelectedCharacterId] = useState("");
   const [filterCharacter, setFilterCharacter] = useState("");
   const [filterDungeon, setFilterDungeon] = useState("all");
   const [filterLoot, setFilterLoot] = useState("all");
@@ -51,17 +52,12 @@ export default function DungeonPage() {
 
   const filteredRuns = runs.filter((run) => {
     if (filterCharacter && run.characterId !== filterCharacter) return false;
-
-    if (filterDungeon !== "all" && run.dungeon !== filterDungeon) {
-      return false;
-    }
-
+    if (filterDungeon !== "all" && run.dungeon !== filterDungeon) return false;
     if (filterLoot === "drops") {
       if (!run.loot || run.loot.length === 0) return false;
     } else if (filterLoot !== "all") {
       if (!run.loot || !run.loot.some((l) => l.name === filterLoot)) return false;
     }
-
     return true;
   });
 
@@ -71,7 +67,6 @@ export default function DungeonPage() {
     setFilterLoot("all");
   }
 
-  // Calculate totals from filtered runs
   const totalSpent = filteredRuns.reduce((sum, run) => sum + (run.cost ?? 0), 0);
   const totalProfit = filteredRuns.reduce((sum, run) => sum + (run.profit ?? 0), 0);
   const totalLoss = totalSpent - totalProfit;
@@ -88,13 +83,19 @@ export default function DungeonPage() {
         characters={characters}
         addCharacter={addCharacter}
         removeCharacter={removeCharacter}
+        onSelectCharacter={setSelectedCharacterId}
+        selectedCharacterId={selectedCharacterId}
       />
 
       <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6 mb-8">
         <h2 className="text-xl font-semibold mb-3 text-yellow-300">
           Log Dungeon Run
         </h2>
-        <DungeonForm characters={characters} onAddRun={addRun} />
+        <DungeonForm
+          characters={characters}
+          onAddRun={addRun}
+          defaultCharacterId={selectedCharacterId}
+        />
       </div>
 
       {/* Filters with Clear Filters button aligned right */}
@@ -264,7 +265,6 @@ export default function DungeonPage() {
               </table>
             </div>
 
-            {/* Totals bubble */}
             <div className="mt-6 p-4 rounded-xl bg-yellow-900 bg-opacity-20 text-yellow-300 font-semibold flex justify-around max-w-md mx-auto">
               <div>
                 <div className="text-sm">Total Spent</div>
