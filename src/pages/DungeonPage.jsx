@@ -5,13 +5,14 @@ import CharacterManager from "../components/Character/CharacterManager";
 import DungeonForm from "../components/Dungeon/DungeonForm";
 
 const rarityColors = {
-  Common: "bg-gray-700 text-gray-200 border-gray-600",
-  Uncommon: "bg-blue-800 text-blue-200 border-blue-400",
-  Rare: "bg-green-800 text-green-200 border-green-400",
+  Standard: "bg-gray-700 text-gray-200 border-gray-600",  // was Common
+  Refined: "bg-blue-800 text-blue-200 border-blue-400",   // was Uncommon
+  Premium: "bg-green-800 text-green-200 border-green-400",// was Rare
   Epic: "bg-red-900 text-red-300 border-red-400",
   Legendary: "bg-yellow-500 text-yellow-900 border-yellow-300 font-extrabold",
   Mythic: "bg-orange-600 text-orange-100 border-orange-300 font-extrabold",
 };
+
 
 export default function DungeonPage() {
   const { characters, addCharacter, removeCharacter } = useCharacters();

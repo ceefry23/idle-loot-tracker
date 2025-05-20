@@ -1,6 +1,99 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import dungeons from "../../data/DungeonDB"; // Your dungeon data
 import CharacterDropdown from "../Character/CharacterDropdown";
+
+const rarityColors = {
+  Standard: "bg-gray-700 text-gray-200 border-gray-600",
+  Refined: "bg-blue-800 text-blue-200 border-blue-400",
+  Premium: "bg-green-800 text-green-200 border-green-400",
+  Epic: "bg-red-900 text-red-300 border-red-400",
+  Legendary: "bg-yellow-500 text-yellow-900 border-yellow-300 font-extrabold",
+  Mythic: "bg-orange-600 text-orange-100 border-orange-300 font-extrabold",
+};
+
+function LootDropdown({ bossLoot, loot, setLoot }) {
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  function handleSelect(item) {
+    if (item.name === "None") {
+      setLoot("None");
+    } else {
+      setLoot(item.name);
+    }
+    setOpen(false);
+  }
+
+  return (
+    <div className="relative w-full" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-4 py-2 text-left focus:ring-2 focus:ring-yellow-400 outline-none transition-all"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        {loot === "None" ? (
+          "None"
+        ) : (
+          <span
+            className={`inline-block px-2 py-1 rounded-full border text-xs align-middle ${
+              rarityColors[bossLoot.find((i) => i.name === loot)?.rarity] || ""
+            }`}
+            title={bossLoot.find((i) => i.name === loot)?.rarity}
+          >
+            {loot} (
+            {bossLoot.find((i) => i.name === loot)?.rarity || "Unknown"})
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <ul
+          className="absolute z-10 w-full bg-gray-900 border border-yellow-500 rounded-xl mt-1 max-h-48 overflow-auto shadow-lg"
+          role="listbox"
+        >
+          <li
+            className="cursor-pointer px-4 py-2 hover:bg-yellow-700/50"
+            onClick={() => handleSelect({ name: "None" })}
+            role="option"
+            aria-selected={loot === "None"}
+          >
+            None
+          </li>
+          {bossLoot.map((item) => (
+            <li
+              key={item.name}
+              className="cursor-pointer px-4 py-2 hover:bg-yellow-700/50"
+              onClick={() => handleSelect(item)}
+              role="option"
+              aria-selected={loot === item.name}
+            >
+              <span
+                className={`inline-block px-2 py-1 rounded-full border text-xs align-middle ${
+                  rarityColors[item.rarity] || ""
+                }`}
+                title={item.rarity}
+              >
+                {item.name} ({item.rarity})
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 function getTodayString() {
   const today = new Date();
@@ -86,19 +179,7 @@ export default function DungeonForm({
         ))}
       </select>
 
-      <select
-        className="border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition-all"
-        value={loot}
-        onChange={(e) => setLoot(e.target.value || "None")}
-        disabled={!dungeon}
-      >
-        <option value="None">None</option>
-        {currentLoot.map((item) => (
-          <option key={item.name} value={item.name}>
-            {item.name} ({item.rarity})
-          </option>
-        ))}
-      </select>
+      <LootDropdown bossLoot={currentLoot} loot={loot} setLoot={setLoot} />
 
       <input
         type="date"
