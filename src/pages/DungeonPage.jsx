@@ -15,7 +15,7 @@ const rarityColors = {
 
 export default function DungeonPage() {
   const { characters, addCharacter, removeCharacter } = useCharacters();
-  const { runs, addRun, removeRun, clearRuns, setRuns } = useDungeonRuns();
+  const { runs, setRuns, addRun, removeRun, clearRuns } = useDungeonRuns();
 
   const [selectedCharacterId, setSelectedCharacterId] = useState("");
   const [filterCharacter, setFilterCharacter] = useState("");

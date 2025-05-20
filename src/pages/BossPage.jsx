@@ -15,7 +15,7 @@ const rarityColors = {
 
 export default function BossPage() {
   const { characters, addCharacter, removeCharacter } = useCharacters();
-  const { runs, addRun, removeRun, clearRuns, setRuns } = useBossRuns();
+  const { runs, setRuns, addRun, removeRun, clearRuns } = useBossRuns();
 
   const [lastCharacterId, setLastCharacterId] = useState("");
   const [lastBoss, setLastBoss] = useState("");
@@ -81,6 +81,7 @@ export default function BossPage() {
   const totalProfit = filteredRuns.reduce((sum, run) => sum + (run.profit ?? 0), 0);
   const totalLoss = totalSpent - totalProfit;
 
+  // Wrap addRun to save last selected character and boss
   function handleAddRun(run) {
     addRun(run);
     setLastCharacterId(run.characterId);
@@ -99,6 +100,7 @@ export default function BossPage() {
         characters={characters}
         addCharacter={addCharacter}
         removeCharacter={removeCharacter}
+        // optional: you can implement onSelectCharacter here to update lastCharacterId if you want
       />
 
       <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6 mb-8">

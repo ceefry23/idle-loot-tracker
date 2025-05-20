@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import dungeons from "../../data/DungeonDB"; // your dungeon database
+import dungeons from "../../data/DungeonDB"; // Your dungeon data
 import CharacterDropdown from "../Character/CharacterDropdown";
 
 function getTodayString() {
@@ -10,9 +10,14 @@ function getTodayString() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-export default function DungeonForm({ characters, onAddRun, defaultCharacterId = "" }) {
+export default function DungeonForm({
+  characters,
+  onAddRun,
+  defaultCharacterId = "",
+  defaultDungeon = "",
+}) {
   const [characterId, setCharacterId] = useState(defaultCharacterId);
-  const [dungeon, setDungeon] = useState("");
+  const [dungeon, setDungeon] = useState(defaultDungeon);
   const [loot, setLoot] = useState("None");
   const [date, setDate] = useState(getTodayString());
 
@@ -23,10 +28,14 @@ export default function DungeonForm({ characters, onAddRun, defaultCharacterId =
     setLoot("None");
   }, [dungeon]);
 
-  // Sync characterId if defaultCharacterId changes externally
+  // Sync characterId and dungeon if defaults change externally
   useEffect(() => {
     setCharacterId(defaultCharacterId);
   }, [defaultCharacterId]);
+
+  useEffect(() => {
+    setDungeon(defaultDungeon);
+  }, [defaultDungeon]);
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -35,7 +44,9 @@ export default function DungeonForm({ characters, onAddRun, defaultCharacterId =
       const timeString = now.toTimeString().split(" ")[0];
       const fullDateTime = `${date}T${timeString}`;
 
-      const lootObjects = loot === "None" ? [] : currentLoot.filter((item) => item.name === loot);
+      const lootObjects =
+        loot === "None" ? [] : currentLoot.filter((item) => item.name === loot);
+
       onAddRun({
         characterId,
         dungeon,
@@ -44,10 +55,10 @@ export default function DungeonForm({ characters, onAddRun, defaultCharacterId =
         loot: lootObjects,
         profit: 0,
       });
+
       setDate(getTodayString());
       setLoot("None");
-      // Do NOT clear characterId to keep selection
-      setDungeon("");
+      // keep selected character and dungeon for convenience
     }
   }
 
@@ -60,8 +71,7 @@ export default function DungeonForm({ characters, onAddRun, defaultCharacterId =
       />
 
       <select
-        className="border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-4 py-2
-          focus:ring-2 focus:ring-yellow-400 outline-none transition-all"
+        className="border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition-all"
         value={dungeon}
         onChange={(e) => setDungeon(e.target.value)}
         required
@@ -77,8 +87,7 @@ export default function DungeonForm({ characters, onAddRun, defaultCharacterId =
       </select>
 
       <select
-        className="border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-4 py-2
-          focus:ring-2 focus:ring-yellow-400 outline-none transition-all"
+        className="border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition-all"
         value={loot}
         onChange={(e) => setLoot(e.target.value || "None")}
         disabled={!dungeon}
@@ -92,9 +101,8 @@ export default function DungeonForm({ characters, onAddRun, defaultCharacterId =
       </select>
 
       <input
-        className="border border-yellow-500 bg-gray-900 text-yellow-200 placeholder-yellow-600 rounded-xl px-4 py-2
-          focus:ring-2 focus:ring-yellow-400 outline-none transition-all"
         type="date"
+        className="border border-yellow-500 bg-gray-900 text-yellow-200 placeholder-yellow-600 rounded-xl px-4 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition-all"
         value={date}
         onChange={(e) => setDate(e.target.value)}
         required
@@ -102,8 +110,7 @@ export default function DungeonForm({ characters, onAddRun, defaultCharacterId =
 
       <button
         type="submit"
-        className="bg-yellow-400 text-gray-900 font-bold px-4 py-2 rounded-xl shadow border border-yellow-400
-          hover:bg-yellow-300 active:scale-95 transition-all mt-2"
+        className="bg-yellow-400 text-gray-900 font-bold px-4 py-2 rounded-xl shadow border border-yellow-400 hover:bg-yellow-300 active:scale-95 transition-all mt-2"
       >
         Add Dungeon Run
       </button>

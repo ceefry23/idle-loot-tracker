@@ -105,19 +105,31 @@ function LootDropdown({ boss, loot, setLoot }) {
   );
 }
 
-export default function BossForm({ characters, onAddRun, defaultCharacterId = "" }) {
+export default function BossForm({
+  characters,
+  onAddRun,
+  defaultCharacterId = "",
+  defaultBoss = "",
+}) {
   const [characterId, setCharacterId] = useState(defaultCharacterId);
-  const [boss, setBoss] = useState("");
+  const [boss, setBoss] = useState(defaultBoss);
   const [loot, setLoot] = useState([]);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
 
+  // Reset loot when boss changes
   useEffect(() => {
     setLoot([]);
   }, [boss]);
 
+  // Sync characterId if defaultCharacterId changes externally
   useEffect(() => {
     setCharacterId(defaultCharacterId);
   }, [defaultCharacterId]);
+
+  // Sync boss if defaultBoss changes externally
+  useEffect(() => {
+    setBoss(defaultBoss);
+  }, [defaultBoss]);
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -142,11 +154,11 @@ export default function BossForm({ characters, onAddRun, defaultCharacterId = ""
 
     onAddRun(run);
 
-    // Reset form but keep character selected
+    // Reset form but keep character and boss selected for convenience
     setBoss("");
     setLoot([]);
     setDate(new Date().toISOString().slice(0, 10));
-    // Do NOT clear characterId
+    // Do NOT clear characterId, keeping it consistent with default
   }
 
   return (
