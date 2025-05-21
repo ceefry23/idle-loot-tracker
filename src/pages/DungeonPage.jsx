@@ -3,40 +3,21 @@ import { useState, useMemo } from "react";
 import { useCharactersContext } from "../context/CharacterContext";
 import useDungeonRuns from "../hooks/useDungeonRuns";
 import DungeonForm from "../components/Dungeon/DungeonForm";
-import { ShieldUser, PlusCircle } from "lucide-react";
-
-const rarityColors = {
-  Standard:  "bg-gray-700 text-gray-200 border-gray-600",
-  Refined:   "bg-blue-800  text-blue-200  border-blue-400",
-  Premium:   "bg-green-800 text-green-200 border-green-400",
-  Epic:      "bg-red-900   text-red-300   border-red-400",
-  Legendary: "bg-yellow-500 text-yellow-900 border-yellow-300 font-extrabold",
-  Mythic:    "bg-orange-600 text-orange-100 border-orange-300 font-extrabold",
-};
+import CharacterSelector from "../components/common/CharacterSelector";
 
 export default function DungeonPage() {
-  const { characters, addCharacter } = useCharactersContext();
+  const { characters } = useCharactersContext();
   const { runs, setRuns, addRun, removeRun, clearRuns } = useDungeonRuns();
 
+  // selected character for new runs
   const [selectedCharacterId, setSelectedCharacterId] = useState("");
-  const [filterCharacter, setFilterCharacter]         = useState("");
-  const [filterDungeon, setFilterDungeon]             = useState("all");
-  const [filterLoot, setFilterLoot]                   = useState("all");
 
-  // Inline-add state
-  const [isAdding, setIsAdding] = useState(false);
-  const [newName, setNewName]   = useState("");
+  // filters
+  const [filterCharacter, setFilterCharacter] = useState("");
+  const [filterDungeon, setFilterDungeon]     = useState("all");
+  const [filterLoot, setFilterLoot]           = useState("all");
 
-  function handleAdd() {
-    const name = newName.trim();
-    if (name) {
-      addCharacter(name);
-      setNewName("");
-      setIsAdding(false);
-    }
-  }
-
-  // Derived data
+  // derived dungeons & loots
   const dungeonsRun = useMemo(
     () => Array.from(new Set(runs.map((r) => r.dungeon))),
     [runs]
@@ -47,6 +28,7 @@ export default function DungeonPage() {
     return Array.from(s);
   }, [runs]);
 
+  // apply filters
   const filteredRuns = runs.filter((run) => {
     if (filterCharacter && run.characterId !== filterCharacter) return false;
     if (filterDungeon !== "all" && run.dungeon !== filterDungeon)   return false;
@@ -55,14 +37,12 @@ export default function DungeonPage() {
     return true;
   });
 
+  // totals
   const totalSpent  = filteredRuns.reduce((sum, r) => sum + (r.cost   || 0), 0);
   const totalProfit = filteredRuns.reduce((sum, r) => sum + (r.profit || 0), 0);
   const net         = totalProfit - totalSpent;
 
-  function getName(id) {
-    return characters.find((c) => c.id === id)?.name || "Unknown";
-  }
-
+  // helper: update profit inline
   function updateProfit(id, v) {
     setRuns((prev) =>
       prev.map((r) =>
@@ -86,71 +66,17 @@ export default function DungeonPage() {
         className="w-full max-w-md mx-auto mb-6 rounded-xl shadow-lg"
       />
 
-      {/* Character Selector Row */}
-      <div className="flex flex-wrap gap-6 justify-center mb-6">
-        {characters.map((c) => {
-          const isSel = c.id === selectedCharacterId;
-          return (
-            <div key={c.id} className="flex flex-col items-center">
-              <button
-                onClick={() => setSelectedCharacterId(c.id)}
-                title={c.name}
-                className={`w-12 h-12 rounded-full flex items-center justify-center mb-1 transition ${
-                  isSel
-                    ? "ring-4 ring-yellow-400 bg-yellow-600 text-gray-900"
-                    : "bg-gray-800 text-yellow-200 hover:bg-gray-700"
-                }`}
-              >
-                <ShieldUser className="w-6 h-6" />
-              </button>
-              <span className="text-xs text-yellow-200 select-none">{c.name}</span>
-            </div>
-          );
-        })}
-
-        {/* Add-new tile */}
-        {isAdding ? (
-          <div className="flex flex-col items-center">
-            <input
-              autoFocus
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-              placeholder="Name"
-              className="w-24 mb-1 px-2 py-1 rounded-xl bg-gray-800 text-yellow-200 border border-yellow-500 focus:ring-2 focus:ring-yellow-400 outline-none"
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={handleAdd}
-                className="px-3 py-1 bg-yellow-400 text-gray-900 rounded-xl font-semibold"
-              >
-                Add
-              </button>
-              <button
-                onClick={() => { setIsAdding(false); setNewName(""); }}
-                className="px-2 py-1 text-gray-400"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center">
-            <button
-              onClick={() => setIsAdding(true)}
-              className="w-12 h-12 rounded-full bg-gray-800 text-yellow-200 flex items-center justify-center hover:bg-gray-700 transition mb-1"
-              title="Add a character"
-            >
-              <PlusCircle className="w-6 h-6" />
-            </button>
-            <span className="text-xs text-yellow-200 select-none">Add</span>
-          </div>
-        )}
-      </div>
+      {/* Universal Character Selector */}
+      <CharacterSelector
+        selectedId={selectedCharacterId}
+        onSelect={setSelectedCharacterId}
+      />
 
       {/* Dungeon Form */}
       <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-3 text-yellow-300">Log Dungeon Run</h2>
+        <h2 className="text-xl font-semibold mb-3 text-yellow-300">
+          Log Dungeon Run
+        </h2>
         <DungeonForm
           characters={characters}
           onAddRun={(run) => addRun({ ...run, id: Date.now().toString() })}
@@ -207,16 +133,17 @@ export default function DungeonPage() {
           <h2 className="text-xl font-semibold text-yellow-300">Dungeon Runs</h2>
           {runs.length > 0 && (
             <button
-              onClick={() => window.confirm("Clear all entries?") && clearRuns()}
+              onClick={() => window.confirm("Are you sure you want to clear all entries?") && clearRuns()}
               className="text-xs text-red-300 hover:text-red-200 underline"
             >
               Clear all
             </button>
           )}
         </div>
-
         {filteredRuns.length === 0 ? (
-          <div className="text-gray-500 py-4 text-center">No dungeon runs found.</div>
+          <div className="text-gray-500 py-4 text-center">
+            No dungeon runs found.
+          </div>
         ) : (
           <>
             <div className="overflow-x-auto">
@@ -246,7 +173,7 @@ export default function DungeonPage() {
                         className="border-b border-gray-800 hover:bg-yellow-900/10 transition"
                       >
                         <td className="py-2 px-4 text-yellow-200">
-                          {getName(run.characterId)}
+                          {characters.find((c) => c.id === run.characterId)?.name}
                         </td>
                         <td className="py-2 px-4 text-yellow-100">{run.dungeon}</td>
                         <td className="py-2 px-4 text-yellow-100">${run.cost}</td>
@@ -255,7 +182,18 @@ export default function DungeonPage() {
                             run.loot.map((item) => (
                               <span
                                 key={item.name}
-                                className={`inline-block mr-2 mb-1 px-2 py-1 rounded-full border text-xs align-middle ${rarityColors[item.rarity]}`}
+                                className={`inline-block mr-2 mb-1 px-2 py-1 rounded-full border text-xs align-middle ${item.rarity === "Standard"
+                                  ? "bg-gray-700 text-gray-200 border-gray-600"
+                                  : item.rarity === "Refined"
+                                  ? "bg-blue-800 text-blue-200 border-blue-400"
+                                  : item.rarity === "Premium"
+                                  ? "bg-green-800 text-green-200 border-green-400"
+                                  : item.rarity === "Epic"
+                                  ? "bg-red-900 text-red-300 border-red-400"
+                                  : item.rarity === "Legendary"
+                                  ? "bg-yellow-500 text-yellow-900 border-yellow-300 font-extrabold"
+                                  : "bg-orange-600 text-orange-100 border-orange-300 font-extrabold"
+                                }`}
                               >
                                 {item.name}
                               </span>
