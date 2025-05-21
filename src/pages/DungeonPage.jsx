@@ -1,66 +1,75 @@
+// src/pages/DungeonPage.jsx
 import { useState, useMemo } from "react";
-import useCharacters from "../hooks/useCharacters";
+import { useCharactersContext } from "../context/CharacterContext";
 import useDungeonRuns from "../hooks/useDungeonRuns";
-import CharacterManager from "../components/Character/CharacterManager";
 import DungeonForm from "../components/Dungeon/DungeonForm";
+import { ShieldUser, PlusCircle } from "lucide-react";
 
 const rarityColors = {
-  Standard: "bg-gray-700 text-gray-200 border-gray-600",  // was Common
-  Refined: "bg-blue-800 text-blue-200 border-blue-400",   // was Uncommon
-  Premium: "bg-green-800 text-green-200 border-green-400",// was Rare
-  Epic: "bg-red-900 text-red-300 border-red-400",
+  Standard:  "bg-gray-700 text-gray-200 border-gray-600",
+  Refined:   "bg-blue-800  text-blue-200  border-blue-400",
+  Premium:   "bg-green-800 text-green-200 border-green-400",
+  Epic:      "bg-red-900   text-red-300   border-red-400",
   Legendary: "bg-yellow-500 text-yellow-900 border-yellow-300 font-extrabold",
-  Mythic: "bg-orange-600 text-orange-100 border-orange-300 font-extrabold",
+  Mythic:    "bg-orange-600 text-orange-100 border-orange-300 font-extrabold",
 };
 
-
 export default function DungeonPage() {
-  const { characters, addCharacter, removeCharacter } = useCharacters();
+  const { characters, addCharacter } = useCharactersContext();
   const { runs, setRuns, addRun, removeRun, clearRuns } = useDungeonRuns();
 
   const [selectedCharacterId, setSelectedCharacterId] = useState("");
-  const [filterCharacter, setFilterCharacter] = useState("");
-  const [filterDungeon, setFilterDungeon] = useState("all");
-  const [filterLoot, setFilterLoot] = useState("all");
+  const [filterCharacter, setFilterCharacter]         = useState("");
+  const [filterDungeon, setFilterDungeon]             = useState("all");
+  const [filterLoot, setFilterLoot]                   = useState("all");
 
-  function getCharacterName(id) {
-    const found = characters.find((c) => c.id === id);
-    return found ? found.name : "Unknown";
+  // Inline-add state
+  const [isAdding, setIsAdding] = useState(false);
+  const [newName, setNewName]   = useState("");
+
+  function handleAdd() {
+    const name = newName.trim();
+    if (name) {
+      addCharacter(name);
+      setNewName("");
+      setIsAdding(false);
+    }
   }
 
-  function updateProfit(id, value) {
-    setRuns((prevRuns) =>
-      prevRuns.map((run) =>
-        run.id === id ? { ...run, profit: parseFloat(value) || 0 } : run
-      )
-    );
-  }
-
-  const dungeonsRun = useMemo(() => {
-    const runDungeons = new Set(runs.map((r) => r.dungeon));
-    return Array.from(runDungeons);
-  }, [runs]);
-
+  // Derived data
+  const dungeonsRun = useMemo(
+    () => Array.from(new Set(runs.map((r) => r.dungeon))),
+    [runs]
+  );
   const uniqueLoots = useMemo(() => {
-    const lootSet = new Set();
-    runs.forEach((run) => {
-      if (run.loot && run.loot.length) {
-        run.loot.forEach((item) => lootSet.add(item.name));
-      }
-    });
-    return Array.from(lootSet);
+    const s = new Set();
+    runs.forEach((r) => r.loot?.forEach((i) => s.add(i.name)));
+    return Array.from(s);
   }, [runs]);
 
   const filteredRuns = runs.filter((run) => {
     if (filterCharacter && run.characterId !== filterCharacter) return false;
-    if (filterDungeon !== "all" && run.dungeon !== filterDungeon) return false;
-    if (filterLoot === "drops") {
-      if (!run.loot || run.loot.length === 0) return false;
-    } else if (filterLoot !== "all") {
-      if (!run.loot || !run.loot.some((l) => l.name === filterLoot)) return false;
-    }
+    if (filterDungeon !== "all" && run.dungeon !== filterDungeon)   return false;
+    if (filterLoot === "drops") return run.loot?.length > 0;
+    if (filterLoot !== "all")    return run.loot?.some((l) => l.name === filterLoot);
     return true;
   });
+
+  const totalSpent  = filteredRuns.reduce((sum, r) => sum + (r.cost   || 0), 0);
+  const totalProfit = filteredRuns.reduce((sum, r) => sum + (r.profit || 0), 0);
+  const net         = totalProfit - totalSpent;
+
+  function getName(id) {
+    return characters.find((c) => c.id === id)?.name || "Unknown";
+  }
+
+  function updateProfit(id, v) {
+    setRuns((prev) =>
+      prev.map((r) =>
+        r.id === id ? { ...r, profit: parseFloat(v) || 0 } : r
+      )
+    );
+  }
 
   function clearFilters() {
     setFilterCharacter("");
@@ -68,38 +77,88 @@ export default function DungeonPage() {
     setFilterLoot("all");
   }
 
-  const totalSpent = filteredRuns.reduce((sum, run) => sum + (run.cost ?? 0), 0);
-  const totalProfit = filteredRuns.reduce((sum, run) => sum + (run.profit ?? 0), 0);
-  const totalLoss = totalSpent - totalProfit;
-
   return (
     <div>
+      {/* Header Banner */}
       <img
         src="/images/idle_loot_tracker.png"
         alt="Loot Tracker Banner"
         className="w-full max-w-md mx-auto mb-6 rounded-xl shadow-lg"
       />
 
-      <CharacterManager
-        characters={characters}
-        addCharacter={addCharacter}
-        removeCharacter={removeCharacter}
-        onSelectCharacter={setSelectedCharacterId}
-        selectedCharacterId={selectedCharacterId}
-      />
+      {/* Character Selector Row */}
+      <div className="flex flex-wrap gap-6 justify-center mb-6">
+        {characters.map((c) => {
+          const isSel = c.id === selectedCharacterId;
+          return (
+            <div key={c.id} className="flex flex-col items-center">
+              <button
+                onClick={() => setSelectedCharacterId(c.id)}
+                title={c.name}
+                className={`w-12 h-12 rounded-full flex items-center justify-center mb-1 transition ${
+                  isSel
+                    ? "ring-4 ring-yellow-400 bg-yellow-600 text-gray-900"
+                    : "bg-gray-800 text-yellow-200 hover:bg-gray-700"
+                }`}
+              >
+                <ShieldUser className="w-6 h-6" />
+              </button>
+              <span className="text-xs text-yellow-200 select-none">{c.name}</span>
+            </div>
+          );
+        })}
 
-      <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6 mb-8">
-        <h2 className="text-xl font-semibold mb-3 text-yellow-300">
-          Log Dungeon Run
-        </h2>
+        {/* Add-new tile */}
+        {isAdding ? (
+          <div className="flex flex-col items-center">
+            <input
+              autoFocus
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+              placeholder="Name"
+              className="w-24 mb-1 px-2 py-1 rounded-xl bg-gray-800 text-yellow-200 border border-yellow-500 focus:ring-2 focus:ring-yellow-400 outline-none"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleAdd}
+                className="px-3 py-1 bg-yellow-400 text-gray-900 rounded-xl font-semibold"
+              >
+                Add
+              </button>
+              <button
+                onClick={() => { setIsAdding(false); setNewName(""); }}
+                className="px-2 py-1 text-gray-400"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center">
+            <button
+              onClick={() => setIsAdding(true)}
+              className="w-12 h-12 rounded-full bg-gray-800 text-yellow-200 flex items-center justify-center hover:bg-gray-700 transition mb-1"
+              title="Add a character"
+            >
+              <PlusCircle className="w-6 h-6" />
+            </button>
+            <span className="text-xs text-yellow-200 select-none">Add</span>
+          </div>
+        )}
+      </div>
+
+      {/* Dungeon Form */}
+      <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6 mb-6">
+        <h2 className="text-xl font-semibold mb-3 text-yellow-300">Log Dungeon Run</h2>
         <DungeonForm
           characters={characters}
-          onAddRun={addRun}
+          onAddRun={(run) => addRun({ ...run, id: Date.now().toString() })}
           defaultCharacterId={selectedCharacterId}
         />
       </div>
 
-      {/* Filters with Clear Filters button aligned right */}
+      {/* Filters */}
       <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
         <div className="flex flex-wrap gap-4">
           <select
@@ -109,25 +168,19 @@ export default function DungeonPage() {
           >
             <option value="">All Characters</option>
             {characters.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
-
           <select
             value={filterDungeon}
             onChange={(e) => setFilterDungeon(e.target.value)}
             className="border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-4 py-2"
           >
             <option value="all">All Dungeons</option>
-            {dungeonsRun.map((dungeonName) => (
-              <option key={dungeonName} value={dungeonName}>
-                {dungeonName}
-              </option>
+            {dungeonsRun.map((d) => (
+              <option key={d} value={d}>{d}</option>
             ))}
           </select>
-
           <select
             value={filterLoot}
             onChange={(e) => setFilterLoot(e.target.value)}
@@ -135,37 +188,27 @@ export default function DungeonPage() {
           >
             <option value="all">All Runs</option>
             <option value="drops">Runs With Loot</option>
-            {uniqueLoots.map((loot) => (
-              <option key={loot} value={loot}>
-                {loot}
-              </option>
+            {uniqueLoots.map((l) => (
+              <option key={l} value={l}>{l}</option>
             ))}
           </select>
         </div>
-
-        <div>
-          <button
-            onClick={clearFilters}
-            className="px-4 py-2 rounded-xl bg-yellow-500 text-gray-900 font-semibold hover:bg-yellow-400 transition"
-          >
-            Clear Filters
-          </button>
-        </div>
+        <button
+          onClick={clearFilters}
+          className="px-4 py-2 rounded-xl bg-yellow-500 text-gray-900 font-semibold hover:bg-yellow-400 transition"
+        >
+          Clear Filters
+        </button>
       </div>
 
+      {/* Runs Table & Summary */}
       <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xl font-semibold text-yellow-300">Dungeon Runs</h2>
           {runs.length > 0 && (
             <button
+              onClick={() => window.confirm("Clear all entries?") && clearRuns()}
               className="text-xs text-red-300 hover:text-red-200 underline"
-              onClick={() => {
-                if (
-                  window.confirm("Are you sure you want to clear all entries?")
-                ) {
-                  clearRuns();
-                }
-              }}
             >
               Clear all
             </button>
@@ -173,9 +216,7 @@ export default function DungeonPage() {
         </div>
 
         {filteredRuns.length === 0 ? (
-          <div className="text-gray-500 py-4 text-center">
-            No dungeon runs found.
-          </div>
+          <div className="text-gray-500 py-4 text-center">No dungeon runs found.</div>
         ) : (
           <>
             <div className="overflow-x-auto">
@@ -195,9 +236,9 @@ export default function DungeonPage() {
                   {filteredRuns
                     .slice()
                     .sort((a, b) => {
-                      const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
-                      if (dateDiff !== 0) return dateDiff;
-                      return b.id.localeCompare(a.id);
+                      const diff = new Date(b.date) - new Date(a.date);
+                      if (diff) return diff;
+                      return String(b.id || "").localeCompare(String(a.id || ""));
                     })
                     .map((run) => (
                       <tr
@@ -205,26 +246,24 @@ export default function DungeonPage() {
                         className="border-b border-gray-800 hover:bg-yellow-900/10 transition"
                       >
                         <td className="py-2 px-4 text-yellow-200">
-                          {getCharacterName(run.characterId)}
+                          {getName(run.characterId)}
                         </td>
                         <td className="py-2 px-4 text-yellow-100">{run.dungeon}</td>
-                        <td className="py-2 px-4 text-yellow-100">{run.cost ?? ""}</td>
+                        <td className="py-2 px-4 text-yellow-100">${run.cost}</td>
                         <td className="py-2 px-4">
-                          {!run.loot || run.loot.length === 0 ? (
-                            <span className="bg-gray-800 text-gray-400 px-2 py-1 rounded-full border border-gray-700 text-xs">
-                              None
-                            </span>
-                          ) : (
+                          {run.loot?.length ? (
                             run.loot.map((item) => (
                               <span
                                 key={item.name}
                                 className={`inline-block mr-2 mb-1 px-2 py-1 rounded-full border text-xs align-middle ${rarityColors[item.rarity]}`}
-                                title={item.rarity}
                               >
                                 {item.name}
-                                <span className="ml-1 opacity-80">({item.rarity})</span>
                               </span>
                             ))
+                          ) : (
+                            <span className="bg-gray-800 text-gray-400 px-2 py-1 rounded-full border text-xs">
+                              None
+                            </span>
                           )}
                         </td>
                         <td className="py-2 px-4">
@@ -247,15 +286,8 @@ export default function DungeonPage() {
                         </td>
                         <td className="py-2 px-4">
                           <button
+                            onClick={() => window.confirm("Delete this entry?") && removeRun(run.id)}
                             className="text-xs text-red-400 hover:text-red-200 underline"
-                            onClick={() => {
-                              if (
-                                window.confirm(
-                                  "Are you sure you want to delete this entry?"
-                                )
-                              )
-                                removeRun(run.id);
-                            }}
                           >
                             Delete
                           </button>
@@ -269,24 +301,16 @@ export default function DungeonPage() {
             <div className="mt-6 p-4 rounded-xl bg-yellow-900 bg-opacity-20 text-yellow-300 font-semibold flex justify-around max-w-md mx-auto">
               <div>
                 <div className="text-sm">Total Spent</div>
-                <div className="text-lg text-yellow-400">
-                  ${totalSpent.toLocaleString()}
-                </div>
+                <div className="text-lg text-yellow-400">${totalSpent.toLocaleString()}</div>
               </div>
               <div>
                 <div className="text-sm">Total Profit</div>
-                <div className="text-lg text-yellow-400">
-                  ${totalProfit.toLocaleString()}
-                </div>
+                <div className="text-lg text-yellow-400">${totalProfit.toLocaleString()}</div>
               </div>
               <div>
                 <div className="text-sm">Net</div>
-                <div
-                  className={`text-lg font-bold ${
-                    totalLoss > 0 ? "text-red-500" : "text-green-400"
-                  }`}
-                >
-                  ${totalLoss.toLocaleString()}
+                <div className={`text-lg font-bold ${net >= 0 ? "text-green-400" : "text-red-500"}`}>
+                  ${net.toLocaleString()}
                 </div>
               </div>
             </div>

@@ -1,19 +1,20 @@
+// src/components/Dungeon/DungeonForm.jsx
 import { useState, useEffect, useRef } from "react";
-import dungeons from "../../data/DungeonDB"; // Your dungeon data
+import dungeons from "../../data/DungeonDB";
 import CharacterDropdown from "../Character/CharacterDropdown";
 
 const rarityColors = {
-  Standard: "bg-gray-700 text-gray-200 border-gray-600",
-  Refined: "bg-blue-800 text-blue-200 border-blue-400",
-  Premium: "bg-green-800 text-green-200 border-green-400",
-  Epic: "bg-red-900 text-red-300 border-red-400",
+  Standard:  "bg-gray-700 text-gray-200 border-gray-600",
+  Refined:   "bg-blue-800  text-blue-200  border-blue-400",
+  Premium:   "bg-green-800 text-green-200 border-green-400",
+  Epic:      "bg-red-900   text-red-300   border-red-400",
   Legendary: "bg-yellow-500 text-yellow-900 border-yellow-300 font-extrabold",
-  Mythic: "bg-orange-600 text-orange-100 border-orange-300 font-extrabold",
+  Mythic:    "bg-orange-600 text-orange-100 border-orange-300 font-extrabold",
 };
 
 function LootDropdown({ bossLoot, loot, setLoot }) {
   const [open, setOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  const dropdownRef     = useRef(null);
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -26,11 +27,7 @@ function LootDropdown({ bossLoot, loot, setLoot }) {
   }, []);
 
   function handleSelect(item) {
-    if (item.name === "None") {
-      setLoot("None");
-    } else {
-      setLoot(item.name);
-    }
+    setLoot(item.name === "None" ? "None" : item.name);
     setOpen(false);
   }
 
@@ -52,8 +49,7 @@ function LootDropdown({ bossLoot, loot, setLoot }) {
             }`}
             title={bossLoot.find((i) => i.name === loot)?.rarity}
           >
-            {loot} (
-            {bossLoot.find((i) => i.name === loot)?.rarity || "Unknown"})
+            {loot} ({bossLoot.find((i) => i.name === loot)?.rarity || "?"})
           </span>
         )}
       </button>
@@ -97,9 +93,9 @@ function LootDropdown({ bossLoot, loot, setLoot }) {
 
 function getTodayString() {
   const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, "0");
-  const dd = String(today.getDate()).padStart(2, "0");
+  const yyyy  = today.getFullYear();
+  const mm    = String(today.getMonth() + 1).padStart(2, "0");
+  const dd    = String(today.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 }
 
@@ -107,52 +103,47 @@ export default function DungeonForm({
   characters,
   onAddRun,
   defaultCharacterId = "",
-  defaultDungeon = "",
+  defaultDungeon     = "",
 }) {
   const [characterId, setCharacterId] = useState(defaultCharacterId);
-  const [dungeon, setDungeon] = useState(defaultDungeon);
-  const [loot, setLoot] = useState("None");
-  const [date, setDate] = useState(getTodayString());
+  const [dungeon, setDungeon]         = useState(defaultDungeon);
+  const [loot, setLoot]               = useState("None");
 
   const currentDungeon = dungeons.find((d) => d.name === dungeon);
-  const currentLoot = currentDungeon?.loot ?? [];
+  const currentLoot    = currentDungeon?.loot ?? [];
 
-  useEffect(() => {
-    setLoot("None");
-  }, [dungeon]);
+  // reset loot whenever dungeon changes
+  useEffect(() => setLoot("None"), [dungeon]);
 
-  // Sync characterId and dungeon if defaults change externally
-  useEffect(() => {
-    setCharacterId(defaultCharacterId);
-  }, [defaultCharacterId]);
-
-  useEffect(() => {
-    setDungeon(defaultDungeon);
-  }, [defaultDungeon]);
+  // sync with external defaults
+  useEffect(() => setCharacterId(defaultCharacterId), [defaultCharacterId]);
+  useEffect(() => setDungeon(defaultDungeon), [defaultDungeon]);
 
   function handleSubmit(e) {
     e.preventDefault();
-    if (characterId && dungeon && date) {
-      const now = new Date();
-      const timeString = now.toTimeString().split(" ")[0];
-      const fullDateTime = `${date}T${timeString}`;
+    if (!characterId || !dungeon) return;
 
-      const lootObjects =
-        loot === "None" ? [] : currentLoot.filter((item) => item.name === loot);
+    const today      = getTodayString();
+    const now        = new Date();
+    const timeString = now.toTimeString().split(" ")[0];
+    const fullDate   = `${today}T${timeString}`;
 
-      onAddRun({
-        characterId,
-        dungeon,
-        cost: currentDungeon ? currentDungeon.cost : 0,
-        date: fullDateTime,
-        loot: lootObjects,
-        profit: 0,
-      });
+    const lootObjects =
+      loot === "None"
+        ? []
+        : currentLoot.filter((item) => item.name === loot);
 
-      setDate(getTodayString());
-      setLoot("None");
-      // keep selected character and dungeon for convenience
-    }
+    onAddRun({
+      id: Date.now().toString(),
+      characterId,
+      dungeon,
+      cost: currentDungeon?.cost ?? 0,
+      date: fullDate,
+      loot: lootObjects,
+      profit: 0,
+    });
+
+    setLoot("None");
   }
 
   return (
@@ -180,14 +171,6 @@ export default function DungeonForm({
       </select>
 
       <LootDropdown bossLoot={currentLoot} loot={loot} setLoot={setLoot} />
-
-      <input
-        type="date"
-        className="border border-yellow-500 bg-gray-900 text-yellow-200 placeholder-yellow-600 rounded-xl px-4 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition-all"
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-        required
-      />
 
       <button
         type="submit"
