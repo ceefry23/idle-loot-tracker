@@ -5,19 +5,38 @@ import useDungeonRuns from "../hooks/useDungeonRuns";
 import DungeonForm from "../components/Dungeon/DungeonForm";
 import CharacterSelector from "../components/common/CharacterSelector";
 
+const rarityColors = {
+  Standard:  "bg-gray-700 text-gray-200 border-gray-600",
+  Refined:   "bg-blue-800 text-blue-200 border-blue-400",
+  Premium:   "bg-green-800 text-green-200 border-green-400",
+  Epic:      "bg-red-900 text-red-300 border-red-400",
+  Legendary: "bg-yellow-500 text-yellow-900 border-yellow-300 font-extrabold",
+  Mythic:    "bg-orange-600 text-orange-100 border-orange-300 font-extrabold",
+};
+
 export default function DungeonPage() {
   const { characters } = useCharactersContext();
   const { runs, setRuns, addRun, removeRun, clearRuns } = useDungeonRuns();
 
-  // selected character for new runs
+  // Selected character for new runs
   const [selectedCharacterId, setSelectedCharacterId] = useState("");
 
-  // filters
+  // Filters
   const [filterCharacter, setFilterCharacter] = useState("");
   const [filterDungeon, setFilterDungeon]     = useState("all");
   const [filterLoot, setFilterLoot]           = useState("all");
 
-  // derived dungeons & loots
+  // Confirmation modals
+  const [pendingRunDelete, setPendingRunDelete] = useState(null); // run.id
+  const [pendingClearAll, setPendingClearAll]   = useState(false);
+
+  // Quick lookup map for character names
+  const charMap = useMemo(
+    () => Object.fromEntries(characters.map((c) => [c.id, c.name])),
+    [characters]
+  );
+
+  // Available dungeons and loot types
   const dungeonsRun = useMemo(
     () => Array.from(new Set(runs.map((r) => r.dungeon))),
     [runs]
@@ -28,7 +47,7 @@ export default function DungeonPage() {
     return Array.from(s);
   }, [runs]);
 
-  // apply filters
+  // Apply filters to runs
   const filteredRuns = runs.filter((run) => {
     if (filterCharacter && run.characterId !== filterCharacter) return false;
     if (filterDungeon !== "all" && run.dungeon !== filterDungeon)   return false;
@@ -37,24 +56,33 @@ export default function DungeonPage() {
     return true;
   });
 
-  // totals
+  // Totals
   const totalSpent  = filteredRuns.reduce((sum, r) => sum + (r.cost   || 0), 0);
   const totalProfit = filteredRuns.reduce((sum, r) => sum + (r.profit || 0), 0);
   const net         = totalProfit - totalSpent;
 
-  // helper: update profit inline
+  // Inline update of profit
   function updateProfit(id, v) {
     setRuns((prev) =>
-      prev.map((r) =>
-        r.id === id ? { ...r, profit: parseFloat(v) || 0 } : r
-      )
+      prev.map((r) => (r.id === id ? { ...r, profit: parseFloat(v) || 0 } : r))
     );
   }
 
+  // Clear only the filter controls
   function clearFilters() {
     setFilterCharacter("");
     setFilterDungeon("all");
     setFilterLoot("all");
+  }
+
+  // Confirm actions
+  function confirmRunDelete() {
+    removeRun(pendingRunDelete);
+    setPendingRunDelete(null);
+  }
+  function confirmClearAll() {
+    clearRuns();
+    setPendingClearAll(false);
   }
 
   return (
@@ -66,7 +94,7 @@ export default function DungeonPage() {
         className="w-full max-w-md mx-auto mb-6 rounded-xl shadow-lg"
       />
 
-      {/* Universal Character Selector */}
+      {/* Character Picker */}
       <CharacterSelector
         selectedId={selectedCharacterId}
         onSelect={setSelectedCharacterId}
@@ -97,6 +125,7 @@ export default function DungeonPage() {
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
+
           <select
             value={filterDungeon}
             onChange={(e) => setFilterDungeon(e.target.value)}
@@ -107,6 +136,7 @@ export default function DungeonPage() {
               <option key={d} value={d}>{d}</option>
             ))}
           </select>
+
           <select
             value={filterLoot}
             onChange={(e) => setFilterLoot(e.target.value)}
@@ -119,6 +149,7 @@ export default function DungeonPage() {
             ))}
           </select>
         </div>
+
         <button
           onClick={clearFilters}
           className="px-4 py-2 rounded-xl bg-yellow-500 text-gray-900 font-semibold hover:bg-yellow-400 transition"
@@ -127,19 +158,20 @@ export default function DungeonPage() {
         </button>
       </div>
 
-      {/* Runs Table & Summary */}
+      {/* Dungeon Runs Table */}
       <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xl font-semibold text-yellow-300">Dungeon Runs</h2>
           {runs.length > 0 && (
             <button
-              onClick={() => window.confirm("Are you sure you want to clear all entries?") && clearRuns()}
+              onClick={() => setPendingClearAll(true)}
               className="text-xs text-red-300 hover:text-red-200 underline"
             >
               Clear all
             </button>
           )}
         </div>
+
         {filteredRuns.length === 0 ? (
           <div className="text-gray-500 py-4 text-center">
             No dungeon runs found.
@@ -164,8 +196,7 @@ export default function DungeonPage() {
                     .slice()
                     .sort((a, b) => {
                       const diff = new Date(b.date) - new Date(a.date);
-                      if (diff) return diff;
-                      return String(b.id || "").localeCompare(String(a.id || ""));
+                      return diff || String(b.id).localeCompare(String(a.id));
                     })
                     .map((run) => (
                       <tr
@@ -173,7 +204,7 @@ export default function DungeonPage() {
                         className="border-b border-gray-800 hover:bg-yellow-900/10 transition"
                       >
                         <td className="py-2 px-4 text-yellow-200">
-                          {characters.find((c) => c.id === run.characterId)?.name}
+                          {charMap[run.characterId] || "Unknown"}
                         </td>
                         <td className="py-2 px-4 text-yellow-100">{run.dungeon}</td>
                         <td className="py-2 px-4 text-yellow-100">${run.cost}</td>
@@ -182,18 +213,7 @@ export default function DungeonPage() {
                             run.loot.map((item) => (
                               <span
                                 key={item.name}
-                                className={`inline-block mr-2 mb-1 px-2 py-1 rounded-full border text-xs align-middle ${item.rarity === "Standard"
-                                  ? "bg-gray-700 text-gray-200 border-gray-600"
-                                  : item.rarity === "Refined"
-                                  ? "bg-blue-800 text-blue-200 border-blue-400"
-                                  : item.rarity === "Premium"
-                                  ? "bg-green-800 text-green-200 border-green-400"
-                                  : item.rarity === "Epic"
-                                  ? "bg-red-900 text-red-300 border-red-400"
-                                  : item.rarity === "Legendary"
-                                  ? "bg-yellow-500 text-yellow-900 border-yellow-300 font-extrabold"
-                                  : "bg-orange-600 text-orange-100 border-orange-300 font-extrabold"
-                                }`}
+                                className={`inline-block mr-2 mb-1 px-2 py-1 rounded-full border text-xs align-middle ${rarityColors[item.rarity]}`}
                               >
                                 {item.name}
                               </span>
@@ -224,7 +244,7 @@ export default function DungeonPage() {
                         </td>
                         <td className="py-2 px-4">
                           <button
-                            onClick={() => window.confirm("Delete this entry?") && removeRun(run.id)}
+                            onClick={() => setPendingRunDelete(run.id)}
                             className="text-xs text-red-400 hover:text-red-200 underline"
                           >
                             Delete
@@ -236,6 +256,7 @@ export default function DungeonPage() {
               </table>
             </div>
 
+            {/* Summary */}
             <div className="mt-6 p-4 rounded-xl bg-yellow-900 bg-opacity-20 text-yellow-300 font-semibold flex justify-around max-w-md mx-auto">
               <div>
                 <div className="text-sm">Total Spent</div>
@@ -255,6 +276,43 @@ export default function DungeonPage() {
           </>
         )}
       </div>
+
+      {/* Confirmation Modal */}
+      {(pendingRunDelete || pendingClearAll) && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20">
+          <div className="bg-gray-900 rounded-xl p-6 max-w-sm w-full text-center">
+            <h2 className="text-xl text-yellow-300 font-semibold mb-4">
+              {pendingClearAll
+                ? "Clear all dungeon runs?"
+                : "Delete this run entry?"}
+            </h2>
+            <p className="text-gray-300 mb-6">
+              {pendingClearAll
+                ? "This will remove all logged runs and cannot be undone."
+                : "This action cannot be undone."}
+            </p>
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={() => {
+                  setPendingRunDelete(null);
+                  setPendingClearAll(false);
+                }}
+                className="px-4 py-2 bg-gray-800 text-yellow-300 rounded-xl hover:bg-gray-700 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  pendingClearAll ? confirmClearAll() : confirmRunDelete();
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-500 transition"
+              >
+                {pendingClearAll ? "Clear All" : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
