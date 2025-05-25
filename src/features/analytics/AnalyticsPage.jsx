@@ -224,10 +224,10 @@ export default function AnalyticsPage() {
   return (
     <>
      <img
-  src="/images/idle_loot_tracker.png"
-  alt="Loot Tracker Banner"
-  className="w-full max-w-md h-40 mx-auto mb-6 rounded-xl shadow-lg object-contain"
-/>
+      src="/images/idle_loot_tracker.png"
+      alt="Loot Tracker Banner"
+      className="w-full max-w-md h-40 mx-auto mb-6 rounded-xl shadow-lg object-contain"
+    />
 
       <div className="flex justify-center gap-4 mb-8">
         <button
@@ -271,7 +271,7 @@ export default function AnalyticsPage() {
               <div className="text-sm">Net</div>
               <div
                 className={`text-2xl font-bold ${
-                  dungeonStats.totalNet > 0 ? "text-red-500" : "text-green-400"
+                  dungeonStats.totalNet >= 0 ? "text-green-400" : "text-red-500"
                 }`}
               >
                 ${dungeonStats.totalNet.toLocaleString()}
@@ -305,7 +305,7 @@ export default function AnalyticsPage() {
               <div className="text-sm">Net</div>
               <div
                 className={`text-2xl font-bold ${
-                  bossStats.totalNet > 0 ? "text-red-500" : "text-green-400"
+                  bossStats.totalNet >= 0 ? "text-green-400" : "text-red-500"
                 }`}
               >
                 ${bossStats.totalNet.toLocaleString()}
