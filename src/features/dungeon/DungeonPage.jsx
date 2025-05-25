@@ -1,9 +1,10 @@
-// src/pages/DungeonPage.jsx
+// src/features/dungeon/DungeonPage.jsx
 import { useState, useMemo } from "react";
 import { useCharactersContext } from "../character/CharacterContext";
-import useDungeonRuns from '../dungeon/useDungeonRuns';
+import useDungeonRuns from './useDungeonRuns';
 import DungeonForm from "./DungeonForm";
 import CharacterSelector from '../character/CharacterSelector';
+import FilterPanel from "../../components/common/FilterPanel";
 
 const rarityColors = {
   Standard:  "bg-gray-700 text-gray-200 border-gray-600",
@@ -88,11 +89,11 @@ export default function DungeonPage() {
   return (
     <div>
       {/* Header Banner */}
-     <img
-  src="/images/idle_loot_tracker.png"
-  alt="Loot Tracker Banner"
-  className="w-full max-w-md h-40 mx-auto mb-6 rounded-xl shadow-lg object-contain"
-/>
+      <img
+        src="/images/idle_loot_tracker.png"
+        alt="Loot Tracker Banner"
+        className="w-full max-w-md h-40 mx-auto mb-6 rounded-xl shadow-lg object-contain"
+      />
 
       {/* Character Picker */}
       <CharacterSelector
@@ -112,8 +113,8 @@ export default function DungeonPage() {
         />
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
+      {/* --- FILTERS with responsive drawer --- */}
+      <FilterPanel>
         <div className="flex flex-wrap gap-4">
           <select
             value={filterCharacter}
@@ -148,15 +149,15 @@ export default function DungeonPage() {
               <option key={l} value={l}>{l}</option>
             ))}
           </select>
-        </div>
 
-        <button
-          onClick={clearFilters}
-          className="px-4 py-2 rounded-xl bg-yellow-500 text-gray-900 font-semibold hover:bg-yellow-400 transition"
-        >
-          Clear Filters
-        </button>
-      </div>
+          <button
+            onClick={clearFilters}
+            className="px-4 py-2 rounded-xl bg-yellow-500 text-gray-900 font-semibold hover:bg-yellow-400 transition"
+          >
+            Clear Filters
+          </button>
+        </div>
+      </FilterPanel>
 
       {/* Dungeon Runs Table */}
       <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6">
