@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import useCharacters from "../hooks/useCharacters";
+import useCharacters from "./useCharacters";
 
 const CharacterContext = createContext(null);
 

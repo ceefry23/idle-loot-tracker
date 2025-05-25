@@ -1,8 +1,7 @@
-// src/components/common/BottomNav.jsx
-import { User, Home, Swords, BarChart3 } from "lucide-react";
+import { Home, Swords, BarChart3 } from "lucide-react";
 
 const navItems = [
-  { id: "profile",   label: "Profile",   icon: <User />      },
+  // { id: "profile",   label: "Profile",   icon: <User />      }, // <-- REMOVED
   { id: "dungeons",  label: "Dungeons",  icon: <Home />      },
   { id: "bosses",    label: "Bosses",    icon: <Swords />    },
   { id: "analytics", label: "Analytics", icon: <BarChart3 /> },

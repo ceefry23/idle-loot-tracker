@@ -1,7 +1,6 @@
-// src/components/Dungeon/DungeonForm.jsx
 import { useState, useEffect, useRef } from "react";
-import dungeons from "../../data/DungeonDB";
-import CharacterDropdown from "../Character/CharacterDropdown";
+import BossDB from './BossDB';
+import CharacterDropdown from '../character/CharacterDropdown';
 
 const rarityColors = {
   Standard:  "bg-gray-700 text-gray-200 border-gray-600",
@@ -12,13 +11,13 @@ const rarityColors = {
   Mythic:    "bg-orange-600 text-orange-100 border-orange-300 font-extrabold",
 };
 
-function LootDropdown({ bossLoot, loot, setLoot }) {
+function LootDropdown({ lootOptions, loot, setLoot }) {
   const [open, setOpen] = useState(false);
-  const dropdownRef     = useRef(null);
+  const ref = useRef(null);
 
   useEffect(() => {
     function handleClickOutside(e) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+      if (ref.current && !ref.current.contains(e.target)) {
         setOpen(false);
       }
     }
@@ -26,30 +25,28 @@ function LootDropdown({ bossLoot, loot, setLoot }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  function handleSelect(item) {
+  function select(item) {
     setLoot(item.name === "None" ? "None" : item.name);
     setOpen(false);
   }
 
   return (
-    <div className="relative w-full" ref={dropdownRef}>
+    <div className="relative w-full" ref={ref}>
       <button
         type="button"
         onClick={() => setOpen(!open)}
         className="w-full border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-4 py-2 text-left focus:ring-2 focus:ring-yellow-400 outline-none transition-all"
-        aria-haspopup="listbox"
-        aria-expanded={open}
       >
         {loot === "None" ? (
           "None"
         ) : (
           <span
             className={`inline-block px-2 py-1 rounded-full border text-xs align-middle ${
-              rarityColors[bossLoot.find((i) => i.name === loot)?.rarity] || ""
+              rarityColors[lootOptions.find((i) => i.name === loot)?.rarity] || ""
             }`}
-            title={bossLoot.find((i) => i.name === loot)?.rarity}
+            title={lootOptions.find((i) => i.name === loot)?.rarity}
           >
-            {loot} ({bossLoot.find((i) => i.name === loot)?.rarity || "?"})
+            {loot} ({lootOptions.find((i) => i.name === loot)?.rarity})
           </span>
         )}
       </button>
@@ -61,17 +58,17 @@ function LootDropdown({ bossLoot, loot, setLoot }) {
         >
           <li
             className="cursor-pointer px-4 py-2 hover:bg-yellow-700/50"
-            onClick={() => handleSelect({ name: "None" })}
+            onClick={() => select({ name: "None" })}
             role="option"
             aria-selected={loot === "None"}
           >
             None
           </li>
-          {bossLoot.map((item) => (
+          {lootOptions.map((item) => (
             <li
               key={item.name}
               className="cursor-pointer px-4 py-2 hover:bg-yellow-700/50"
-              onClick={() => handleSelect(item)}
+              onClick={() => select(item)}
               role="option"
               aria-selected={loot === item.name}
             >
@@ -91,58 +88,44 @@ function LootDropdown({ bossLoot, loot, setLoot }) {
   );
 }
 
-function getTodayString() {
-  const today = new Date();
-  const yyyy  = today.getFullYear();
-  const mm    = String(today.getMonth() + 1).padStart(2, "0");
-  const dd    = String(today.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-export default function DungeonForm({
+export default function BossForm({
   characters,
   onAddRun,
   defaultCharacterId = "",
-  defaultDungeon     = "",
+  defaultBoss = "",
 }) {
   const [characterId, setCharacterId] = useState(defaultCharacterId);
-  const [dungeon, setDungeon]         = useState(defaultDungeon);
-  const [loot, setLoot]               = useState("None");
+  const [boss, setBoss] = useState(defaultBoss);
+  const [loot, setLoot] = useState("None");
 
-  const currentDungeon = dungeons.find((d) => d.name === dungeon);
-  const currentLoot    = currentDungeon?.loot ?? [];
+  // find selected boss data
+  const currentBoss = BossDB.find((b) => b.name === boss);
+  const bossLoot = currentBoss?.loot ?? [];
 
-  // reset loot whenever dungeon changes
-  useEffect(() => setLoot("None"), [dungeon]);
-
-  // sync with external defaults
+  // sync defaults
   useEffect(() => setCharacterId(defaultCharacterId), [defaultCharacterId]);
-  useEffect(() => setDungeon(defaultDungeon), [defaultDungeon]);
+  useEffect(() => setBoss(defaultBoss), [defaultBoss]);
+  useEffect(() => setLoot("None"), [boss]);
 
   function handleSubmit(e) {
     e.preventDefault();
-    if (!characterId || !dungeon) return;
+    if (!characterId || !boss) return;
 
-    const today      = getTodayString();
-    const now        = new Date();
-    const timeString = now.toTimeString().split(" ")[0];
-    const fullDate   = `${today}T${timeString}`;
-
-    const lootObjects =
-      loot === "None"
-        ? []
-        : currentLoot.filter((item) => item.name === loot);
+    const timestamp = new Date().toISOString();
+    const lootItems = loot === "None"
+      ? []
+      : bossLoot.filter((i) => i.name === loot);
 
     onAddRun({
-      id: Date.now().toString(),
       characterId,
-      dungeon,
-      cost: currentDungeon?.cost ?? 0,
-      date: fullDate,
-      loot: lootObjects,
-      profit: 0,
+      boss,
+      cost: currentBoss?.cost ?? 0,
+      loot: lootItems,
+      reward: 0,
+      date: timestamp,
     });
 
+    // reset just the loot
     setLoot("None");
   }
 
@@ -156,27 +139,27 @@ export default function DungeonForm({
 
       <select
         className="border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition-all"
-        value={dungeon}
-        onChange={(e) => setDungeon(e.target.value)}
+        value={boss}
+        onChange={(e) => setBoss(e.target.value)}
         required
       >
         <option value="" disabled>
-          Select dungeon...
+          Select boss...
         </option>
-        {dungeons.map((d) => (
-          <option key={d.name} value={d.name}>
-            {d.name} (Cost: {d.cost})
+        {BossDB.map((b) => (
+          <option key={b.name} value={b.name}>
+            {b.name}
           </option>
         ))}
       </select>
 
-      <LootDropdown bossLoot={currentLoot} loot={loot} setLoot={setLoot} />
+      <LootDropdown lootOptions={bossLoot} loot={loot} setLoot={setLoot} />
 
       <button
         type="submit"
         className="bg-yellow-400 text-gray-900 font-bold px-4 py-2 rounded-xl shadow border border-yellow-400 hover:bg-yellow-300 active:scale-95 transition-all mt-2"
       >
-        Add Dungeon Run
+        Add Boss Run
       </button>
     </form>
   );

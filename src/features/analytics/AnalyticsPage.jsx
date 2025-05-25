@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
-import useDungeonRuns from "../hooks/useDungeonRuns";
-import useBossRuns from "../hooks/useBossRuns";
+import useDungeonRuns from '../dungeon/useDungeonRuns';
+import useBossRuns from '../boss/useBossRuns';
 
 function AverageRunsPerDrop({ runs, type }) {
   const uniqueEntities = useMemo(() => {
@@ -223,11 +223,11 @@ export default function AnalyticsPage() {
 
   return (
     <>
-      <img
-        src="/images/idle_loot_tracker.png"
-        alt="Loot Tracker Banner"
-        className="w-full max-w-md mx-auto mb-6 rounded-xl shadow-lg"
-      />
+     <img
+  src="/images/idle_loot_tracker.png"
+  alt="Loot Tracker Banner"
+  className="w-full max-w-md h-40 mx-auto mb-6 rounded-xl shadow-lg object-contain"
+/>
 
       <div className="flex justify-center gap-4 mb-8">
         <button

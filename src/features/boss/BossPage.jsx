@@ -1,9 +1,10 @@
 // src/pages/BossPage.jsx
 import { useState, useMemo } from "react";
-import { useCharactersContext } from "../context/CharacterContext";
-import useBossRuns from "../hooks/useBossRuns";
-import BossForm from "../components/Boss/BossForm";
-import CharacterSelector from "../components/common/CharacterSelector";
+import { useCharactersContext } from "../character/CharacterContext";
+import useBossRuns from "./useBossRuns";
+import BossForm from './BossForm';
+import CharacterSelector from '../character/CharacterSelector';
+
 
 const rarityColors = {
   Standard:  "bg-gray-700 text-gray-200 border-gray-600",
@@ -90,11 +91,11 @@ export default function BossPage() {
   return (
     <div>
       {/* Header Banner */}
-      <img
-        src="/images/idle_loot_tracker.png"
-        alt="Loot Tracker Banner"
-        className="w-full max-w-md mx-auto mb-6 rounded-xl shadow-lg"
-      />
+     <img
+  src="/images/idle_loot_tracker.png"
+  alt="Loot Tracker Banner"
+  className="w-full max-w-md h-40 mx-auto mb-6 rounded-xl shadow-lg object-contain"
+/>
 
       {/* Character Selector */}
       <CharacterSelector

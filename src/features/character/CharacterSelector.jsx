@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useCharactersContext } from "../../context/CharacterContext";
 import { ShieldUser, PlusCircle, Trash2 } from "lucide-react";
+import { useCharactersContext } from './CharacterContext';
+
 
 export default function CharacterSelector({ selectedId, onSelect }) {
   const { characters, addCharacter, removeCharacter } = useCharactersContext();
