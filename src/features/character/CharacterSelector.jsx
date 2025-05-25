@@ -1,25 +1,33 @@
+// src/features/character/CharacterSelector.jsx
 import { useState } from "react";
 import { ShieldUser, PlusCircle, Trash2 } from "lucide-react";
 import { useCharactersContext } from './CharacterContext';
 
-
 export default function CharacterSelector({ selectedId, onSelect }) {
   const { characters, addCharacter, removeCharacter } = useCharactersContext();
 
-  // Inline-add form state
+  // Add character UI state
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName]   = useState("");
+  const [error, setError] = useState("");
 
-  // Pending delete for styled modal
+  // Pending delete for modal
   const [pendingDelete, setPendingDelete] = useState(null);
-  // { id, name } or null
 
   function handleAdd() {
     const name = newName.trim();
-    if (!name) return;
-    addCharacter(name);
+    if (!name) {
+      setError("Character name is required.");
+      return;
+    }
+    if (characters.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+      setError("This name already exists.");
+      return;
+    }
+    addCharacter({ id: Date.now().toString(), name });
     setNewName("");
     setIsAdding(false);
+    setError("");
   }
 
   function confirmDelete() {
@@ -44,7 +52,6 @@ export default function CharacterSelector({ selectedId, onSelect }) {
               >
                 <Trash2 className="w-4 h-4" />
               </button>
-
               {/* character icon */}
               <button
                 onClick={() => onSelect?.(c.id)}
@@ -57,7 +64,6 @@ export default function CharacterSelector({ selectedId, onSelect }) {
               >
                 <ShieldUser className="w-6 h-6" />
               </button>
-
               <span className="text-xs text-yellow-200 select-none">{c.name}</span>
             </div>
           );
@@ -69,11 +75,15 @@ export default function CharacterSelector({ selectedId, onSelect }) {
             <input
               autoFocus
               value={newName}
-              onChange={(e) => setNewName(e.target.value)}
+              onChange={(e) => {
+                setNewName(e.target.value);
+                setError("");
+              }}
               onKeyDown={(e) => e.key === "Enter" && handleAdd()}
               placeholder="Name"
               className="w-24 mb-1 px-2 py-1 rounded-xl bg-gray-800 text-yellow-200 border border-yellow-500 focus:ring-2 focus:ring-yellow-400 outline-none"
             />
+            {error && <div className="text-xs text-red-400 mb-1">{error}</div>}
             <div className="flex gap-2">
               <button
                 onClick={handleAdd}
@@ -85,6 +95,7 @@ export default function CharacterSelector({ selectedId, onSelect }) {
                 onClick={() => {
                   setIsAdding(false);
                   setNewName("");
+                  setError("");
                 }}
                 className="px-2 py-1 text-gray-400"
               >
