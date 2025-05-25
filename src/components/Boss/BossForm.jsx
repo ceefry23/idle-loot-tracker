@@ -1,6 +1,6 @@
 // src/components/Boss/BossForm.jsx
 import { useState, useEffect, useRef } from "react";
-import bosses from "../../data/bossDB";                  // lowercase b!
+import bosses from "../../data/BossDB";                  // lowercase b!
 import CharacterDropdown from "../Character/CharacterDropdown";
 
 const rarityColors = {
@@ -149,7 +149,7 @@ export default function BossForm({
         </option>
         {bosses.map((b) => (
           <option key={b.name} value={b.name}>
-            {b.name} (Cost: {b.cost})
+            {b.name}
           </option>
         ))}
       </select>
@@ -163,5 +163,5 @@ export default function BossForm({
         Add Boss Run
       </button>
     </form>
-);
+  );
 }

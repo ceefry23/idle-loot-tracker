@@ -16,7 +16,8 @@ const rarityColors = {
 
 export default function BossPage() {
   const { characters } = useCharactersContext();
-  const { runs, setRuns, addRun, removeRun, clearRuns } = useBossRuns();
+  // Destructure updateRun (not setRuns)
+  const { runs, addRun, updateRun, removeRun, clearRuns } = useBossRuns();
 
   // Selected character for new runs
   const [selectedCharacterId, setSelectedCharacterId] = useState("");
@@ -30,13 +31,13 @@ export default function BossPage() {
   const [pendingRunDelete, setPendingRunDelete] = useState(null);
   const [pendingClearAll, setPendingClearAll]   = useState(false);
 
-  // Character lookup
+  // Map character IDs → names
   const charMap = useMemo(
     () => Object.fromEntries(characters.map((c) => [c.id, c.name])),
     [characters]
   );
 
-  // Available bosses & loot options
+  // Available boss names & loot names
   const bossesRun = useMemo(
     () => Array.from(new Set(runs.map((r) => r.boss))),
     [runs]
@@ -56,18 +57,17 @@ export default function BossPage() {
     return true;
   });
 
-  // Totals
+  // Totals: cost, profit (reward), net
   const totalCost   = filteredRuns.reduce((sum, r) => sum + (r.cost   || 0), 0);
   const totalProfit = filteredRuns.reduce((sum, r) => sum + (r.reward || 0), 0);
   const net         = totalProfit - totalCost;
 
-  // Update profit inline
+  // Inline updates via updateRun
+  function updateCost(id, v) {
+    updateRun(id, { cost: parseFloat(v) || 0 });
+  }
   function updateProfit(id, v) {
-    setRuns((prev) =>
-      prev.map((r) =>
-        r.id === id ? { ...r, reward: parseFloat(v) || 0 } : r
-      )
-    );
+    updateRun(id, { reward: parseFloat(v) || 0 });
   }
 
   // Clear filters only
@@ -160,7 +160,7 @@ export default function BossPage() {
         </button>
       </div>
 
-      {/* Runs Table */}
+      {/* Runs Table & Summary */}
       <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xl font-semibold text-yellow-300">Boss Runs</h2>
@@ -190,7 +190,7 @@ export default function BossPage() {
                     <th className="py-3 px-4 text-left">Loot</th>
                     <th className="py-3 px-4 text-left">Profit</th>
                     <th className="py-3 px-4 text-left">Date</th>
-                    <th className="py-3 px-4 text-left"></th>
+                    <th className="py-3 px-4"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -209,7 +209,20 @@ export default function BossPage() {
                           {charMap[run.characterId] || "Unknown"}
                         </td>
                         <td className="py-2 px-4 text-yellow-100">{run.boss}</td>
-                        <td className="py-2 px-4 text-yellow-100">${run.cost}</td>
+
+                        {/* Editable Cost */}
+                        <td className="py-2 px-4">
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={run.cost ?? ""}
+                            onChange={(e) => updateCost(run.id, e.target.value)}
+                            className="w-20 rounded border border-yellow-600 bg-gray-800 px-2 py-1 text-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                            placeholder="Cost"
+                          />
+                        </td>
+
                         <td className="py-2 px-4">
                           {run.loot?.length ? (
                             run.loot.map((item) => (
@@ -226,24 +239,28 @@ export default function BossPage() {
                             </span>
                           )}
                         </td>
+
+                        {/* Editable Profit */}
                         <td className="py-2 px-4">
                           <input
                             type="number"
-                            step="any"
                             min="0"
+                            step="any"
                             value={run.reward ?? ""}
                             onChange={(e) => updateProfit(run.id, e.target.value)}
                             className="w-20 rounded border border-yellow-600 bg-gray-800 px-2 py-1 text-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                             placeholder="Profit"
                           />
                         </td>
+
                         <td className="py-2 px-4 text-gray-200">
                           {new Date(run.date).toLocaleDateString(undefined, {
-                            day: "2-digit",
+                            day:   "2-digit",
                             month: "short",
-                            year: "numeric",
+                            year:  "numeric",
                           })}
                         </td>
+
                         <td className="py-2 px-4">
                           <button
                             onClick={() => setPendingRunDelete(run.id)}
@@ -280,13 +297,11 @@ export default function BossPage() {
       </div>
 
       {/* Confirmation Modal */}
-      {(pendingRunDelete || pendingClearAll) && (
+      {(pendingRunDelete || pendingClearAll) && ( 
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20">
           <div className="bg-gray-900 rounded-xl p-6 max-w-sm w-full text-center">
             <h2 className="text-xl text-yellow-300 font-semibold mb-4">
-              {pendingClearAll
-                ? "Clear all boss runs?"
-                : "Delete this run entry?"}
+              {pendingClearAll ? "Clear all boss runs?" : "Delete this run entry?"}
             </h2>
             <p className="text-gray-300 mb-6">
               {pendingClearAll
