@@ -4,7 +4,7 @@ import { useCharactersContext } from "../character/CharacterContext";
 import useBossRuns from "./useBossRuns";
 import BossForm from './BossForm';
 import CharacterSelector from '../character/CharacterSelector';
-
+import FilterPanel from "../../components/common/FilterPanel";
 
 const rarityColors = {
   Standard:  "bg-gray-700 text-gray-200 border-gray-600",
@@ -17,28 +17,20 @@ const rarityColors = {
 
 export default function BossPage() {
   const { characters } = useCharactersContext();
-  // Destructure updateRun (not setRuns)
   const { runs, addRun, updateRun, removeRun, clearRuns } = useBossRuns();
 
-  // Selected character for new runs
   const [selectedCharacterId, setSelectedCharacterId] = useState("");
-
-  // Filters
   const [filterCharacter, setFilterCharacter] = useState("");
-  const [filterBoss, setFilterBoss]           = useState("all");
-  const [filterLoot, setFilterLoot]           = useState("all");
-
-  // Confirmation modal state
+  const [filterBoss, setFilterBoss] = useState("all");
+  const [filterLoot, setFilterLoot] = useState("all");
   const [pendingRunDelete, setPendingRunDelete] = useState(null);
-  const [pendingClearAll, setPendingClearAll]   = useState(false);
+  const [pendingClearAll, setPendingClearAll] = useState(false);
 
-  // Map character IDs → names
   const charMap = useMemo(
     () => Object.fromEntries(characters.map((c) => [c.id, c.name])),
     [characters]
   );
 
-  // Available boss names & loot names
   const bossesRun = useMemo(
     () => Array.from(new Set(runs.map((r) => r.boss))),
     [runs]
@@ -49,36 +41,37 @@ export default function BossPage() {
     return Array.from(s);
   }, [runs]);
 
-  // Filtered runs
   const filteredRuns = runs.filter((run) => {
     if (filterCharacter && run.characterId !== filterCharacter) return false;
-    if (filterBoss !== "all" && run.boss !== filterBoss)          return false;
+    if (filterBoss !== "all" && run.boss !== filterBoss) return false;
     if (filterLoot === "drops") return run.loot?.length > 0;
-    if (filterLoot !== "all")    return run.loot?.some((l) => l.name === filterLoot);
+    if (filterLoot !== "all") return run.loot?.some((l) => l.name === filterLoot);
     return true;
   });
 
-  // Totals: cost, profit (reward), net
   const totalCost   = filteredRuns.reduce((sum, r) => sum + (r.cost   || 0), 0);
   const totalProfit = filteredRuns.reduce((sum, r) => sum + (r.reward || 0), 0);
   const net         = totalProfit - totalCost;
 
-  // Inline updates via updateRun
+  // For context label
+  const charLabel = !filterCharacter
+    ? "All Characters"
+    : characters.find(c => c.id === filterCharacter)?.name || "Unknown";
+  const bossLabel = filterBoss === "all" || !filterBoss
+    ? "All Bosses"
+    : filterBoss;
+
   function updateCost(id, v) {
     updateRun(id, { cost: parseFloat(v) || 0 });
   }
   function updateProfit(id, v) {
     updateRun(id, { reward: parseFloat(v) || 0 });
   }
-
-  // Clear filters only
   function clearFilters() {
     setFilterCharacter("");
     setFilterBoss("all");
     setFilterLoot("all");
   }
-
-  // Confirmation actions
   function confirmRunDelete() {
     removeRun(pendingRunDelete);
     setPendingRunDelete(null);
@@ -91,11 +84,11 @@ export default function BossPage() {
   return (
     <div>
       {/* Header Banner */}
-     <img
-  src="/images/idle_loot_tracker.png"
-  alt="Loot Tracker Banner"
-  className="w-full max-w-md h-40 mx-auto mb-6 rounded-xl shadow-lg object-contain"
-/>
+      <img
+        src="/images/idle_loot_tracker.png"
+        alt="Loot Tracker Banner"
+        className="w-full max-w-md h-40 mx-auto mb-6 rounded-xl shadow-lg object-contain"
+      />
 
       {/* Character Selector */}
       <CharacterSelector
@@ -115,8 +108,8 @@ export default function BossPage() {
         />
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
+      {/* FILTERS */}
+      <FilterPanel>
         <div className="flex flex-wrap gap-4">
           <select
             value={filterCharacter}
@@ -128,7 +121,6 @@ export default function BossPage() {
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
-
           <select
             value={filterBoss}
             onChange={(e) => setFilterBoss(e.target.value)}
@@ -139,7 +131,6 @@ export default function BossPage() {
               <option key={b} value={b}>{b}</option>
             ))}
           </select>
-
           <select
             value={filterLoot}
             onChange={(e) => setFilterLoot(e.target.value)}
@@ -151,14 +142,18 @@ export default function BossPage() {
               <option key={l} value={l}>{l}</option>
             ))}
           </select>
+          <button
+            onClick={clearFilters}
+            className="px-4 py-2 rounded-xl bg-yellow-500 text-gray-900 font-semibold hover:bg-yellow-400 transition"
+          >
+            Clear Filters
+          </button>
         </div>
+      </FilterPanel>
 
-        <button
-          onClick={clearFilters}
-          className="px-4 py-2 rounded-xl bg-yellow-500 text-gray-900 font-semibold hover:bg-yellow-400 transition"
-        >
-          Clear Filters
-        </button>
+      {/* CONTEXT SUBTITLE */}
+      <div className="text-lg font-semibold text-yellow-300 mb-6 text-center">
+        Boss Runs – {charLabel} – {bossLabel}
       </div>
 
       {/* Runs Table & Summary */}
@@ -210,8 +205,6 @@ export default function BossPage() {
                           {charMap[run.characterId] || "Unknown"}
                         </td>
                         <td className="py-2 px-4 text-yellow-100">{run.boss}</td>
-
-                        {/* Editable Cost */}
                         <td className="py-2 px-4">
                           <input
                             type="number"
@@ -223,7 +216,6 @@ export default function BossPage() {
                             placeholder="Cost"
                           />
                         </td>
-
                         <td className="py-2 px-4">
                           {run.loot?.length ? (
                             run.loot.map((item) => (
@@ -240,8 +232,6 @@ export default function BossPage() {
                             </span>
                           )}
                         </td>
-
-                        {/* Editable Profit */}
                         <td className="py-2 px-4">
                           <input
                             type="number"
@@ -253,7 +243,6 @@ export default function BossPage() {
                             placeholder="Profit"
                           />
                         </td>
-
                         <td className="py-2 px-4 text-gray-200">
                           {new Date(run.date).toLocaleDateString(undefined, {
                             day:   "2-digit",
@@ -261,7 +250,6 @@ export default function BossPage() {
                             year:  "numeric",
                           })}
                         </td>
-
                         <td className="py-2 px-4">
                           <button
                             onClick={() => setPendingRunDelete(run.id)}
@@ -275,7 +263,6 @@ export default function BossPage() {
                 </tbody>
               </table>
             </div>
-
             {/* Summary */}
             <div className="mt-6 p-4 rounded-xl bg-yellow-900 bg-opacity-20 text-yellow-300 font-semibold flex justify-around max-w-md mx-auto">
               <div>

@@ -1,324 +1,254 @@
-import { useState, useMemo, useEffect } from "react";
-import useDungeonRuns from '../dungeon/useDungeonRuns';
-import useBossRuns from '../boss/useBossRuns';
+import { useState, useMemo } from "react";
+import useDungeonRuns from "../dungeon/useDungeonRuns";
+import useBossRuns from "../boss/useBossRuns";
+import { useCharactersContext } from "../character/CharacterContext";
+import FilterPanel from "../../components/common/FilterPanel";
 
-function AverageRunsPerDrop({ runs, type }) {
-  const uniqueEntities = useMemo(() => {
-    const set = new Set(runs.map((r) => (type === "dungeon" ? r.dungeon : r.boss)));
-    return Array.from(set);
-  }, [runs, type]);
+// Helper for drop streaks
+function getDropStreaks(runs) {
+  const sorted = runs
+    .slice()
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-  const allLootItems = useMemo(() => {
-    const lootSet = new Set();
-    runs.forEach((run) => {
-      if (run.loot && run.loot.length) {
-        run.loot.forEach(({ name }) => lootSet.add(name));
-      }
-    });
-    return Array.from(lootSet);
-  }, [runs]);
+  let longest = 0, current = 0, maxSoFar = 0;
 
-  const [selectedEntity, setSelectedEntity] = useState("");
-  const [selectedDrop, setSelectedDrop] = useState("any");
-
-  // Initialize selectedEntity when uniqueEntities changes
-  useEffect(() => {
-    if (uniqueEntities.length > 0 && !uniqueEntities.includes(selectedEntity)) {
-      setSelectedEntity(uniqueEntities[0]);
-    }
-  }, [uniqueEntities, selectedEntity]);
-
-  // Reset selectedDrop to "any" when loot items change
-  useEffect(() => {
-    setSelectedDrop("any");
-  }, [allLootItems]);
-
-  const averageRunsPerDrop = useMemo(() => {
-    if (!selectedEntity) return null;
-
-    const filteredRuns = runs.filter((r) =>
-      type === "dungeon" ? r.dungeon === selectedEntity : r.boss === selectedEntity
-    );
-
-    const totalRuns = filteredRuns.length;
-
-    if (selectedDrop === "any") {
-      const dropRunsCount = filteredRuns.filter((run) => run.loot && run.loot.length > 0).length;
-      return {
-        totalRuns,
-        averages: [
-          {
-            item: "Any Drop",
-            avgRunsPerDrop: dropRunsCount ? (totalRuns / dropRunsCount).toFixed(2) : "N/A",
-          },
-        ],
-      };
+  for (let i = 0; i < sorted.length; i++) {
+    if (!sorted[i].loot || sorted[i].loot.length === 0) {
+      current++;
+      if (current > maxSoFar) maxSoFar = current;
     } else {
-      const dropCounts = {};
-      filteredRuns.forEach((run) => {
-        if (run.loot && run.loot.length) {
-          run.loot.forEach(({ name }) => {
-            dropCounts[name] = (dropCounts[name] || 0) + 1;
-          });
-        }
-      });
-
-      const count = dropCounts[selectedDrop] || 0;
-
-      return {
-        totalRuns,
-        averages: [
-          {
-            item: selectedDrop,
-            avgRunsPerDrop: count ? (totalRuns / count).toFixed(2) : "N/A",
-          },
-        ],
-      };
+      current = 0;
     }
-  }, [runs, selectedEntity, selectedDrop, type]);
+  }
+  longest = maxSoFar;
 
-  if (!selectedEntity) return <div className="text-yellow-300">No {type}s found.</div>;
-
-  return (
-    <div className="mt-6 p-4 rounded-xl bg-gray-800 bg-opacity-40 text-yellow-300 flex-1">
-      <label className="block mb-2 font-semibold">
-        Select {type.charAt(0).toUpperCase() + type.slice(1)}:
-        <select
-          value={selectedEntity}
-          onChange={(e) => setSelectedEntity(e.target.value)}
-          className="ml-2 bg-gray-900 text-yellow-200 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-        >
-          {uniqueEntities.map((entity) => (
-            <option key={entity} value={entity}>
-              {entity}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label className="block mb-4 font-semibold">
-        Select Drop:
-        <select
-          value={selectedDrop}
-          onChange={(e) => setSelectedDrop(e.target.value)}
-          className="ml-2 bg-gray-900 text-yellow-200 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-        >
-          <option value="any">Any Drop</option>
-          {allLootItems.map((item) => (
-            <option key={item} value={item}>
-              {item}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <div>
-        <div>Total Runs: {averageRunsPerDrop.totalRuns}</div>
-        <div className="mt-2 font-semibold">Average Runs per Drop:</div>
-        {averageRunsPerDrop.averages[0].avgRunsPerDrop === "N/A" ? (
-          <div>No drops recorded for this selection.</div>
-        ) : (
-          <ul className="list-disc list-inside max-h-48 overflow-y-auto">
-            {averageRunsPerDrop.averages.map(({ item, avgRunsPerDrop }) => (
-              <li key={item}>
-                {item}: {avgRunsPerDrop}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function RunsWithoutDrop({ runs, type }) {
-  const uniqueEntities = useMemo(() => {
-    const set = new Set(runs.map((r) => (type === "dungeon" ? r.dungeon : r.boss)));
-    return Array.from(set);
-  }, [runs, type]);
-
-  const [selectedEntity, setSelectedEntity] = useState("");
-
-  // Initialize selectedEntity when uniqueEntities changes
-  useEffect(() => {
-    if (uniqueEntities.length > 0 && !uniqueEntities.includes(selectedEntity)) {
-      setSelectedEntity(uniqueEntities[0]);
+  let curStreak = 0;
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    if (!sorted[i].loot || sorted[i].loot.length === 0) {
+      curStreak++;
+    } else {
+      break;
     }
-  }, [uniqueEntities, selectedEntity]);
+  }
 
-  const stats = useMemo(() => {
-    if (!selectedEntity) return null;
-
-    const filteredRuns = runs
-      .filter((r) => (type === "dungeon" ? r.dungeon === selectedEntity : r.boss === selectedEntity))
-      .sort((a, b) => new Date(a.date) - new Date(b.date));
-
-    let longestStreak = 0;
-    let currentStreak = 0;
-
-    filteredRuns.forEach(run => {
-      if (!run.loot || run.loot.length === 0) {
-        currentStreak++;
-        if (currentStreak > longestStreak) longestStreak = currentStreak;
-      } else {
-        currentStreak = 0;
-      }
-    });
-
-    let currentRunsWithoutDrop = 0;
-    for (let i = filteredRuns.length - 1; i >= 0; i--) {
-      if (!filteredRuns[i].loot || filteredRuns[i].loot.length === 0) {
-        currentRunsWithoutDrop++;
-      } else {
-        break;
-      }
-    }
-
-    return { currentRunsWithoutDrop, longestStreak };
-  }, [runs, selectedEntity, type]);
-
-  if (!selectedEntity) return <div className="text-yellow-300">No {type}s found.</div>;
-
-  return (
-    <div className="mt-6 p-4 rounded-xl bg-gray-800 bg-opacity-40 text-yellow-300 flex-1">
-      <label className="block mb-2 font-semibold">
-        Select {type.charAt(0).toUpperCase() + type.slice(1)}:
-        <select
-          value={selectedEntity}
-          onChange={(e) => setSelectedEntity(e.target.value)}
-          className="ml-2 bg-gray-900 text-yellow-200 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-        >
-          {uniqueEntities.map((entity) => (
-            <option key={entity} value={entity}>
-              {entity}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div>
-        <div>Current Runs Without a Drop: {stats.currentRunsWithoutDrop}</div>
-        <div>Longest Run Without a Drop: {stats.longestStreak}</div>
-      </div>
-    </div>
-  );
+  return { longest, current: curStreak };
 }
 
 export default function AnalyticsPage() {
+  const { characters } = useCharactersContext();
   const { runs: dungeonRuns } = useDungeonRuns();
   const { runs: bossRuns } = useBossRuns();
 
-  const [activeTab, setActiveTab] = useState("dungeons");
+  // Filters
+  const [filterCharacter, setFilterCharacter] = useState("");
+  const [filterDungeon, setFilterDungeon] = useState("");
+  const [filterBoss, setFilterBoss] = useState("");
 
-  function aggregateRuns(runs) {
+  // Dropdown lists
+  const dungeonList = useMemo(
+    () => Array.from(new Set(dungeonRuns.map(r => r.dungeon))),
+    [dungeonRuns]
+  );
+  const bossList = useMemo(
+    () => Array.from(new Set(bossRuns.map(r => r.boss))),
+    [bossRuns]
+  );
+
+  // Filtered runs
+  const filteredDungeonRuns = useMemo(() => {
+    return dungeonRuns.filter(r =>
+      (!filterCharacter || r.characterId === filterCharacter) &&
+      (!filterDungeon || r.dungeon === filterDungeon)
+    );
+  }, [dungeonRuns, filterCharacter, filterDungeon]);
+
+  const filteredBossRuns = useMemo(() => {
+    return bossRuns.filter(r =>
+      (!filterCharacter || r.characterId === filterCharacter) &&
+      (!filterBoss || r.boss === filterBoss)
+    );
+  }, [bossRuns, filterCharacter, filterBoss]);
+
+  // Stats
+  function aggregateRuns(runs, isBoss = false) {
     const totalRuns = runs.length;
     const totalSpent = runs.reduce((sum, run) => sum + (run.cost ?? 0), 0);
-    const totalProfit = runs.reduce((sum, run) => sum + (run.profit ?? 0), 0);
+    const totalProfit = runs.reduce((sum, run) => sum + (isBoss ? (run.reward ?? 0) : (run.profit ?? 0)), 0);
     const totalNet = totalProfit - totalSpent;
-
-    return { totalRuns, totalSpent, totalProfit, totalNet };
+    const totalDrops = runs.reduce((sum, run) => sum + (run.loot ? run.loot.length : 0), 0);
+    const runsWithDrops = runs.filter(run => run.loot && run.loot.length > 0).length;
+    const percentWithDrops = totalRuns > 0 ? ((runsWithDrops / totalRuns) * 100).toFixed(1) : "0.0";
+    const { longest, current } = getDropStreaks(runs);
+    return { totalRuns, totalSpent, totalProfit, totalNet, totalDrops, percentWithDrops, runsWithoutDrop: current, longestStreak: longest };
   }
 
-  const dungeonStats = useMemo(() => aggregateRuns(dungeonRuns), [dungeonRuns]);
-  const bossStats = useMemo(() => aggregateRuns(bossRuns), [bossRuns]);
+  const dungeonStats = useMemo(() => aggregateRuns(filteredDungeonRuns), [filteredDungeonRuns]);
+  const bossStats = useMemo(() => aggregateRuns(filteredBossRuns, true), [filteredBossRuns]);
+
+  // Filter reset
+  function clearFilters() {
+    setFilterCharacter("");
+    setFilterDungeon("");
+    setFilterBoss("");
+  }
+
+  const charLabel = !filterCharacter
+    ? "All Characters"
+    : characters.find(c => c.id === filterCharacter)?.name || "Unknown";
+
+  const dungeonLabel = !filterDungeon ? "All Dungeons" : filterDungeon;
+  const bossLabel = !filterBoss ? "All Bosses" : filterBoss;
 
   return (
-    <>
-     <img
-      src="/images/idle_loot_tracker.png"
-      alt="Loot Tracker Banner"
-      className="w-full max-w-md h-40 mx-auto mb-6 rounded-xl shadow-lg object-contain"
-    />
+    <div>
+      <img
+        src="/images/idle_loot_tracker.png"
+        alt="Loot Tracker Banner"
+        className="w-full max-w-md h-40 mx-auto mb-6 rounded-xl shadow-lg object-contain"
+      />
 
-      <div className="flex justify-center gap-4 mb-8">
-        <button
-          onClick={() => setActiveTab("dungeons")}
-          className={`px-6 py-2 rounded-xl font-semibold transition ${
-            activeTab === "dungeons"
-              ? "bg-yellow-500 text-gray-900"
-              : "bg-gray-800 text-yellow-300"
-          }`}
+      {/* Filter Modal, now identical row as dungeon/boss pages */}
+      <FilterPanel>
+        <select
+          value={filterCharacter}
+          onChange={e => setFilterCharacter(e.target.value)}
+          className="border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-4 py-2"
         >
-          Dungeons
-        </button>
-        <button
-          onClick={() => setActiveTab("bosses")}
-          className={`px-6 py-2 rounded-xl font-semibold transition ${
-            activeTab === "bosses"
-              ? "bg-yellow-500 text-gray-900"
-              : "bg-gray-800 text-yellow-300"
-          }`}
+          <option value="">All Characters</option>
+          {characters.map(c => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+        <select
+          value={filterDungeon}
+          onChange={e => setFilterDungeon(e.target.value)}
+          className="border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-4 py-2"
         >
-          Bosses
+          <option value="">All Dungeons</option>
+          {dungeonList.map(d => (
+            <option key={d} value={d}>{d}</option>
+          ))}
+        </select>
+        <select
+          value={filterBoss}
+          onChange={e => setFilterBoss(e.target.value)}
+          className="border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-4 py-2"
+        >
+          <option value="">All Bosses</option>
+          {bossList.map(b => (
+            <option key={b} value={b}>{b}</option>
+          ))}
+        </select>
+        <button
+          onClick={clearFilters}
+          className="px-4 py-2 rounded-xl bg-yellow-500 text-gray-900 font-semibold hover:bg-yellow-400 transition"
+          type="button"
+        >
+          Clear Filters
         </button>
-      </div>
+      </FilterPanel>
 
-      {activeTab === "dungeons" && (
-        <section className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6 mb-8">
-          <div className="flex justify-around text-yellow-300 text-center mb-6 flex-wrap gap-4">
+      {/* Dungeon Analytics */}
+      <section className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6 mb-8 flex flex-col items-center">
+        <div className="text-lg font-semibold text-yellow-300 mb-8 text-center">
+          Dungeon Runs – {charLabel} – {dungeonLabel}
+        </div>
+        <div className="w-full flex flex-col md:flex-row gap-6 justify-center items-center text-center">
+          {/* Profit Stats Card (left) */}
+          <div className="flex-1 bg-gray-800/80 rounded-xl p-6 flex flex-col items-center gap-2 border border-yellow-800 justify-center">
+            <div className="text-yellow-300 text-md font-semibold mb-2">Profit Stats</div>
             <div>
-              <div className="text-sm">Total Runs</div>
-              <div className="text-2xl font-bold">{dungeonStats.totalRuns}</div>
+              <div className="text-sm text-yellow-300">Total Spent</div>
+              <div className="text-xl font-bold text-yellow-200">${dungeonStats.totalSpent.toLocaleString()}</div>
             </div>
             <div>
-              <div className="text-sm">Total Spent</div>
-              <div className="text-2xl font-bold">${dungeonStats.totalSpent.toLocaleString()}</div>
+              <div className="text-sm text-yellow-300">Total Profit</div>
+              <div className="text-xl font-bold text-yellow-200">${dungeonStats.totalProfit.toLocaleString()}</div>
             </div>
             <div>
-              <div className="text-sm">Total Profit</div>
-              <div className="text-2xl font-bold">${dungeonStats.totalProfit.toLocaleString()}</div>
-            </div>
-            <div>
-              <div className="text-sm">Net</div>
-              <div
-                className={`text-2xl font-bold ${
-                  dungeonStats.totalNet >= 0 ? "text-green-400" : "text-red-500"
-                }`}
-              >
+              <div className="text-sm text-yellow-300">Net</div>
+              <div className={`text-xl font-bold ${dungeonStats.totalNet >= 0 ? "text-green-400" : "text-red-500"}`}>
                 ${dungeonStats.totalNet.toLocaleString()}
               </div>
             </div>
           </div>
-
-          <div className="flex flex-wrap gap-6 mt-6">
-            <AverageRunsPerDrop runs={dungeonRuns} type="dungeon" />
-            <RunsWithoutDrop runs={dungeonRuns} type="dungeon" />
+          {/* Run/Drop Stats Card (right) */}
+          <div className="flex-1 bg-gray-800/80 rounded-xl p-6 flex flex-col items-center gap-2 border border-yellow-800 justify-center">
+            <div className="text-yellow-300 text-md font-semibold mb-2">Run/Drop Stats</div>
+            <div>
+              <div className="text-sm text-yellow-300">Total Runs</div>
+              <div className="text-xl font-bold text-yellow-200">{dungeonStats.totalRuns}</div>
+            </div>
+            <div>
+              <div className="text-sm text-yellow-300">Total Drops</div>
+              <div className="text-xl font-bold text-yellow-200">{dungeonStats.totalDrops}</div>
+            </div>
+            <div>
+              <div className="text-sm text-yellow-300">% With Drops</div>
+              <div className="text-xl font-bold text-yellow-200">{dungeonStats.percentWithDrops}%</div>
+            </div>
+            <div>
+              <div className="text-sm text-yellow-300">Current Runs Without a Drop</div>
+              <div className="text-xl font-bold text-yellow-200">{dungeonStats.runsWithoutDrop}</div>
+            </div>
+            <div>
+              <div className="text-sm text-yellow-300">Longest Run Without a Drop</div>
+              <div className="text-xl font-bold text-yellow-200">{dungeonStats.longestStreak}</div>
+            </div>
           </div>
-        </section>
-      )}
+        </div>
+      </section>
 
-      {activeTab === "bosses" && (
-        <section className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6 mb-8">
-          <div className="flex justify-around text-yellow-300 text-center mb-6 flex-wrap gap-4">
+      {/* Boss Analytics */}
+      <section className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6 mb-8 flex flex-col items-center">
+        <div className="text-lg font-semibold text-yellow-300 mb-8 text-center">
+          Boss Runs – {charLabel} – {bossLabel}
+        </div>
+        <div className="w-full flex flex-col md:flex-row gap-6 justify-center items-center text-center">
+          {/* Profit Stats Card (left) */}
+          <div className="flex-1 bg-gray-800/80 rounded-xl p-6 flex flex-col items-center gap-2 border border-yellow-800 justify-center">
+            <div className="text-yellow-300 text-md font-semibold mb-2">Profit Stats</div>
             <div>
-              <div className="text-sm">Total Runs</div>
-              <div className="text-2xl font-bold">{bossStats.totalRuns}</div>
+              <div className="text-sm text-yellow-300">Total Spent</div>
+              <div className="text-xl font-bold text-yellow-200">${bossStats.totalSpent.toLocaleString()}</div>
             </div>
             <div>
-              <div className="text-sm">Total Spent</div>
-              <div className="text-2xl font-bold">${bossStats.totalSpent.toLocaleString()}</div>
+              <div className="text-sm text-yellow-300">Total Profit</div>
+              <div className="text-xl font-bold text-yellow-200">${bossStats.totalProfit.toLocaleString()}</div>
             </div>
             <div>
-              <div className="text-sm">Total Profit</div>
-              <div className="text-2xl font-bold">${bossStats.totalProfit.toLocaleString()}</div>
-            </div>
-            <div>
-              <div className="text-sm">Net</div>
-              <div
-                className={`text-2xl font-bold ${
-                  bossStats.totalNet >= 0 ? "text-green-400" : "text-red-500"
-                }`}
-              >
+              <div className="text-sm text-yellow-300">Net</div>
+              <div className={`text-xl font-bold ${bossStats.totalNet >= 0 ? "text-green-400" : "text-red-500"}`}>
                 ${bossStats.totalNet.toLocaleString()}
               </div>
             </div>
           </div>
-
-          <div className="flex flex-wrap gap-6 mt-6">
-            <AverageRunsPerDrop runs={bossRuns} type="boss" />
-            <RunsWithoutDrop runs={bossRuns} type="boss" />
+          {/* Run/Drop Stats Card (right) */}
+          <div className="flex-1 bg-gray-800/80 rounded-xl p-6 flex flex-col items-center gap-2 border border-yellow-800 justify-center">
+            <div className="text-yellow-300 text-md font-semibold mb-2">Run/Drop Stats</div>
+            <div>
+              <div className="text-sm text-yellow-300">Total Runs</div>
+              <div className="text-xl font-bold text-yellow-200">{bossStats.totalRuns}</div>
+            </div>
+            <div>
+              <div className="text-sm text-yellow-300">Total Drops</div>
+              <div className="text-xl font-bold text-yellow-200">{bossStats.totalDrops}</div>
+            </div>
+            <div>
+              <div className="text-sm text-yellow-300">% With Drops</div>
+              <div className="text-xl font-bold text-yellow-200">{bossStats.percentWithDrops}%</div>
+            </div>
+            <div>
+              <div className="text-sm text-yellow-300">Current Runs Without a Drop</div>
+              <div className="text-xl font-bold text-yellow-200">{bossStats.runsWithoutDrop}</div>
+            </div>
+            <div>
+              <div className="text-sm text-yellow-300">Longest Run Without a Drop</div>
+              <div className="text-xl font-bold text-yellow-200">{bossStats.longestStreak}</div>
+            </div>
           </div>
-        </section>
-      )}
-    </>
+        </div>
+      </section>
+    </div>
   );
 }

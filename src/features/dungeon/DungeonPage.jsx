@@ -28,7 +28,7 @@ export default function DungeonPage() {
   const [filterLoot, setFilterLoot]           = useState("all");
 
   // Confirmation modals
-  const [pendingRunDelete, setPendingRunDelete] = useState(null); // run.id
+  const [pendingRunDelete, setPendingRunDelete] = useState(null);
   const [pendingClearAll, setPendingClearAll]   = useState(false);
 
   // Quick lookup map for character names
@@ -61,6 +61,14 @@ export default function DungeonPage() {
   const totalSpent  = filteredRuns.reduce((sum, r) => sum + (r.cost   || 0), 0);
   const totalProfit = filteredRuns.reduce((sum, r) => sum + (r.profit || 0), 0);
   const net         = totalProfit - totalSpent;
+
+  // For context label
+  const charLabel = !filterCharacter
+    ? "All Characters"
+    : characters.find(c => c.id === filterCharacter)?.name || "Unknown";
+  const dungeonLabel = filterDungeon === "all" || !filterDungeon
+    ? "All Dungeons"
+    : filterDungeon;
 
   // Inline update of profit
   function updateProfit(id, v) {
@@ -158,6 +166,11 @@ export default function DungeonPage() {
           </button>
         </div>
       </FilterPanel>
+
+      {/* --- CONTEXT SUBTITLE --- */}
+      <div className="text-lg font-semibold text-yellow-300 mb-6 text-center">
+        Dungeon Runs – {charLabel} – {dungeonLabel}
+      </div>
 
       {/* Dungeon Runs Table */}
       <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6">

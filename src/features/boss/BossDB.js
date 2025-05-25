@@ -1,4 +1,3 @@
-// src/data/BossDB.js
 const BossDB = [
   {
     name: "Isadora",
