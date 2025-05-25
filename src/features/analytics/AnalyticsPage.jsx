@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
-import useDungeonRuns from "../dungeon/useDungeonRuns";
-import useBossRuns from "../boss/useBossRuns";
+import useHybridDungeonRuns from "../dungeon/useHybridDungeonRuns";
+import useHybridBossRuns from "../boss/useHybridBossRuns";
 import { useCharactersContext } from "../character/CharacterContext";
 import FilterPanel from "../../components/common/FilterPanel";
 
@@ -36,8 +36,8 @@ function getDropStreaks(runs) {
 
 export default function AnalyticsPage() {
   const { characters } = useCharactersContext();
-  const { runs: dungeonRuns } = useDungeonRuns();
-  const { runs: bossRuns } = useBossRuns();
+  const { runs: dungeonRuns } = useHybridDungeonRuns();
+  const { runs: bossRuns } = useHybridBossRuns();
 
   // Filters
   const [filterCharacter, setFilterCharacter] = useState("");

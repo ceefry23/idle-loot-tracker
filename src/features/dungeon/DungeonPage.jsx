@@ -1,7 +1,6 @@
-// src/features/dungeon/DungeonPage.jsx
 import { useState, useMemo } from "react";
 import { useCharactersContext } from "../character/CharacterContext";
-import useDungeonRuns from './useDungeonRuns';
+import useHybridDungeonRuns from './useHybridDungeonRuns'; // <-- HYBRID HOOK
 import DungeonForm from "./DungeonForm";
 import CharacterSelector from '../character/CharacterSelector';
 import FilterPanel from "../../components/common/FilterPanel";
@@ -17,9 +16,8 @@ const rarityColors = {
 
 export default function DungeonPage() {
   const { characters } = useCharactersContext();
-  const { runs, setRuns, addRun, removeRun, clearRuns } = useDungeonRuns();
+  const { runs, addRun, updateRun, removeRun, clearRuns } = useHybridDungeonRuns();
 
-  // Selected character for new runs
   const [selectedCharacterId, setSelectedCharacterId] = useState("");
 
   // Filters
@@ -30,6 +28,14 @@ export default function DungeonPage() {
   // Confirmation modals
   const [pendingRunDelete, setPendingRunDelete] = useState(null);
   const [pendingClearAll, setPendingClearAll]   = useState(false);
+
+  // For context label
+  const charLabel = !filterCharacter
+    ? "All Characters"
+    : characters.find(c => c.id === filterCharacter)?.name || "Unknown";
+  const dungeonLabel = filterDungeon === "all" || !filterDungeon
+    ? "All Dungeons"
+    : filterDungeon;
 
   // Quick lookup map for character names
   const charMap = useMemo(
@@ -62,19 +68,9 @@ export default function DungeonPage() {
   const totalProfit = filteredRuns.reduce((sum, r) => sum + (r.profit || 0), 0);
   const net         = totalProfit - totalSpent;
 
-  // For context label
-  const charLabel = !filterCharacter
-    ? "All Characters"
-    : characters.find(c => c.id === filterCharacter)?.name || "Unknown";
-  const dungeonLabel = filterDungeon === "all" || !filterDungeon
-    ? "All Dungeons"
-    : filterDungeon;
-
   // Inline update of profit
   function updateProfit(id, v) {
-    setRuns((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, profit: parseFloat(v) || 0 } : r))
-    );
+    updateRun(id, { profit: parseFloat(v) || 0 });
   }
 
   // Clear only the filter controls

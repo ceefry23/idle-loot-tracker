@@ -1,10 +1,10 @@
 import { createContext, useContext } from "react";
-import useCharacters from "./useCharacters";
+import useHybridCharacters from "./useHybridCharacters";
 
 const CharacterContext = createContext(null);
 
 export function CharactersProvider({ children }) {
-  const charHook = useCharacters();
+  const charHook = useHybridCharacters();
   return (
     <CharacterContext.Provider value={charHook}>
       {children}

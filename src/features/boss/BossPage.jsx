@@ -1,7 +1,6 @@
-// src/pages/BossPage.jsx
 import { useState, useMemo } from "react";
 import { useCharactersContext } from "../character/CharacterContext";
-import useBossRuns from "./useBossRuns";
+import useHybridBossRuns from "./useHybridBossRuns"; // <-- HYBRID HOOK
 import BossForm from './BossForm';
 import CharacterSelector from '../character/CharacterSelector';
 import FilterPanel from "../../components/common/FilterPanel";
@@ -17,20 +16,28 @@ const rarityColors = {
 
 export default function BossPage() {
   const { characters } = useCharactersContext();
-  const { runs, addRun, updateRun, removeRun, clearRuns } = useBossRuns();
+  const { runs, addRun, updateRun, removeRun, clearRuns } = useHybridBossRuns();
 
   const [selectedCharacterId, setSelectedCharacterId] = useState("");
   const [filterCharacter, setFilterCharacter] = useState("");
   const [filterBoss, setFilterBoss] = useState("all");
   const [filterLoot, setFilterLoot] = useState("all");
+
   const [pendingRunDelete, setPendingRunDelete] = useState(null);
   const [pendingClearAll, setPendingClearAll] = useState(false);
+
+  // For subtitle
+  const charLabel = !filterCharacter
+    ? "All Characters"
+    : characters.find(c => c.id === filterCharacter)?.name || "Unknown";
+  const bossLabel = filterBoss === "all" || !filterBoss
+    ? "All Bosses"
+    : filterBoss;
 
   const charMap = useMemo(
     () => Object.fromEntries(characters.map((c) => [c.id, c.name])),
     [characters]
   );
-
   const bossesRun = useMemo(
     () => Array.from(new Set(runs.map((r) => r.boss))),
     [runs]
@@ -52,14 +59,6 @@ export default function BossPage() {
   const totalCost   = filteredRuns.reduce((sum, r) => sum + (r.cost   || 0), 0);
   const totalProfit = filteredRuns.reduce((sum, r) => sum + (r.reward || 0), 0);
   const net         = totalProfit - totalCost;
-
-  // For context label
-  const charLabel = !filterCharacter
-    ? "All Characters"
-    : characters.find(c => c.id === filterCharacter)?.name || "Unknown";
-  const bossLabel = filterBoss === "all" || !filterBoss
-    ? "All Bosses"
-    : filterBoss;
 
   function updateCost(id, v) {
     updateRun(id, { cost: parseFloat(v) || 0 });
