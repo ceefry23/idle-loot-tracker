@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useCharactersContext } from "../character/CharacterContext";
-import useHybridBossRuns from "./useHybridBossRuns"; // <-- HYBRID HOOK
+import useHybridBossRuns from "./useHybridBossRuns";
 import BossForm from './BossForm';
 import CharacterSelector from '../character/CharacterSelector';
 import FilterPanel from "../../components/common/FilterPanel";
@@ -22,11 +22,9 @@ export default function BossPage() {
   const [filterCharacter, setFilterCharacter] = useState("");
   const [filterBoss, setFilterBoss] = useState("all");
   const [filterLoot, setFilterLoot] = useState("all");
-
   const [pendingRunDelete, setPendingRunDelete] = useState(null);
   const [pendingClearAll, setPendingClearAll] = useState(false);
 
-  // For subtitle
   const charLabel = !filterCharacter
     ? "All Characters"
     : characters.find(c => c.id === filterCharacter)?.name || "Unknown";
@@ -60,12 +58,15 @@ export default function BossPage() {
   const totalProfit = filteredRuns.reduce((sum, r) => sum + (r.reward || 0), 0);
   const net         = totalProfit - totalCost;
 
-  function updateCost(id, v) {
-    updateRun(id, { cost: parseFloat(v) || 0 });
+  function handleCostChange(id, v) {
+    const value = parseFloat(v);
+    updateRun(id, { cost: isNaN(value) ? 0 : value });
   }
-  function updateProfit(id, v) {
-    updateRun(id, { reward: parseFloat(v) || 0 });
+  function handleProfitChange(id, v) {
+    const value = parseFloat(v);
+    updateRun(id, { reward: isNaN(value) ? 0 : value });
   }
+
   function clearFilters() {
     setFilterCharacter("");
     setFilterBoss("all");
@@ -89,7 +90,6 @@ export default function BossPage() {
         className="w-full max-w-md h-40 mx-auto mb-6 rounded-xl shadow-lg object-contain"
       />
 
-      {/* Character Selector */}
       <CharacterSelector
         selectedId={selectedCharacterId}
         onSelect={setSelectedCharacterId}
@@ -107,7 +107,6 @@ export default function BossPage() {
         />
       </div>
 
-      {/* FILTERS */}
       <FilterPanel>
         <div className="flex flex-wrap gap-4">
           <select
@@ -150,12 +149,10 @@ export default function BossPage() {
         </div>
       </FilterPanel>
 
-      {/* CONTEXT SUBTITLE */}
       <div className="text-lg font-semibold text-yellow-300 mb-6 text-center">
         Boss Runs – {charLabel} – {bossLabel}
       </div>
 
-      {/* Runs Table & Summary */}
       <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xl font-semibold text-yellow-300">Boss Runs</h2>
@@ -210,7 +207,7 @@ export default function BossPage() {
                             min="0"
                             step="any"
                             value={run.cost ?? ""}
-                            onChange={(e) => updateCost(run.id, e.target.value)}
+                            onChange={(e) => handleCostChange(run.id, e.target.value)}
                             className="w-20 rounded border border-yellow-600 bg-gray-800 px-2 py-1 text-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                             placeholder="Cost"
                           />
@@ -237,7 +234,7 @@ export default function BossPage() {
                             min="0"
                             step="any"
                             value={run.reward ?? ""}
-                            onChange={(e) => updateProfit(run.id, e.target.value)}
+                            onChange={(e) => handleProfitChange(run.id, e.target.value)}
                             className="w-20 rounded border border-yellow-600 bg-gray-800 px-2 py-1 text-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                             placeholder="Profit"
                           />

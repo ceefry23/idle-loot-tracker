@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useCharactersContext } from "../character/CharacterContext";
-import useHybridDungeonRuns from './useHybridDungeonRuns'; // <-- HYBRID HOOK
+import useHybridDungeonRuns from './useHybridDungeonRuns';
 import DungeonForm from "./DungeonForm";
 import CharacterSelector from '../character/CharacterSelector';
 import FilterPanel from "../../components/common/FilterPanel";
@@ -19,17 +19,12 @@ export default function DungeonPage() {
   const { runs, addRun, updateRun, removeRun, clearRuns } = useHybridDungeonRuns();
 
   const [selectedCharacterId, setSelectedCharacterId] = useState("");
-
-  // Filters
   const [filterCharacter, setFilterCharacter] = useState("");
-  const [filterDungeon, setFilterDungeon]     = useState("all");
-  const [filterLoot, setFilterLoot]           = useState("all");
-
-  // Confirmation modals
+  const [filterDungeon, setFilterDungeon] = useState("all");
+  const [filterLoot, setFilterLoot] = useState("all");
   const [pendingRunDelete, setPendingRunDelete] = useState(null);
-  const [pendingClearAll, setPendingClearAll]   = useState(false);
+  const [pendingClearAll, setPendingClearAll] = useState(false);
 
-  // For context label
   const charLabel = !filterCharacter
     ? "All Characters"
     : characters.find(c => c.id === filterCharacter)?.name || "Unknown";
@@ -37,13 +32,11 @@ export default function DungeonPage() {
     ? "All Dungeons"
     : filterDungeon;
 
-  // Quick lookup map for character names
   const charMap = useMemo(
     () => Object.fromEntries(characters.map((c) => [c.id, c.name])),
     [characters]
   );
 
-  // Available dungeons and loot types
   const dungeonsRun = useMemo(
     () => Array.from(new Set(runs.map((r) => r.dungeon))),
     [runs]
@@ -54,7 +47,6 @@ export default function DungeonPage() {
     return Array.from(s);
   }, [runs]);
 
-  // Apply filters to runs
   const filteredRuns = runs.filter((run) => {
     if (filterCharacter && run.characterId !== filterCharacter) return false;
     if (filterDungeon !== "all" && run.dungeon !== filterDungeon)   return false;
@@ -63,24 +55,26 @@ export default function DungeonPage() {
     return true;
   });
 
-  // Totals
   const totalSpent  = filteredRuns.reduce((sum, r) => sum + (r.cost   || 0), 0);
   const totalProfit = filteredRuns.reduce((sum, r) => sum + (r.profit || 0), 0);
   const net         = totalProfit - totalSpent;
 
-  // Inline update of profit
-  function updateProfit(id, v) {
-    updateRun(id, { profit: parseFloat(v) || 0 });
+  // Editable cost/profit fields use updateRun
+  function handleCostChange(id, v) {
+    const value = parseFloat(v);
+    updateRun(id, { cost: isNaN(value) ? 0 : value });
+  }
+  function handleProfitChange(id, v) {
+    const value = parseFloat(v);
+    updateRun(id, { profit: isNaN(value) ? 0 : value });
   }
 
-  // Clear only the filter controls
   function clearFilters() {
     setFilterCharacter("");
     setFilterDungeon("all");
     setFilterLoot("all");
   }
 
-  // Confirm actions
   function confirmRunDelete() {
     removeRun(pendingRunDelete);
     setPendingRunDelete(null);
@@ -117,7 +111,6 @@ export default function DungeonPage() {
         />
       </div>
 
-      {/* --- FILTERS with responsive drawer --- */}
       <FilterPanel>
         <div className="flex flex-wrap gap-4">
           <select
@@ -130,7 +123,6 @@ export default function DungeonPage() {
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
-
           <select
             value={filterDungeon}
             onChange={(e) => setFilterDungeon(e.target.value)}
@@ -141,7 +133,6 @@ export default function DungeonPage() {
               <option key={d} value={d}>{d}</option>
             ))}
           </select>
-
           <select
             value={filterLoot}
             onChange={(e) => setFilterLoot(e.target.value)}
@@ -153,7 +144,6 @@ export default function DungeonPage() {
               <option key={l} value={l}>{l}</option>
             ))}
           </select>
-
           <button
             onClick={clearFilters}
             className="px-4 py-2 rounded-xl bg-yellow-500 text-gray-900 font-semibold hover:bg-yellow-400 transition"
@@ -163,12 +153,10 @@ export default function DungeonPage() {
         </div>
       </FilterPanel>
 
-      {/* --- CONTEXT SUBTITLE --- */}
       <div className="text-lg font-semibold text-yellow-300 mb-6 text-center">
         Dungeon Runs – {charLabel} – {dungeonLabel}
       </div>
 
-      {/* Dungeon Runs Table */}
       <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xl font-semibold text-yellow-300">Dungeon Runs</h2>
@@ -217,7 +205,17 @@ export default function DungeonPage() {
                           {charMap[run.characterId] || "Unknown"}
                         </td>
                         <td className="py-2 px-4 text-yellow-100">{run.dungeon}</td>
-                        <td className="py-2 px-4 text-yellow-100">${run.cost}</td>
+                        <td className="py-2 px-4">
+                          <input
+                            type="number"
+                            step="any"
+                            min="0"
+                            value={run.cost ?? ""}
+                            onChange={(e) => handleCostChange(run.id, e.target.value)}
+                            className="w-20 rounded border border-yellow-600 bg-gray-800 px-2 py-1 text-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                            placeholder="Cost"
+                          />
+                        </td>
                         <td className="py-2 px-4">
                           {run.loot?.length ? (
                             run.loot.map((item) => (
@@ -240,7 +238,7 @@ export default function DungeonPage() {
                             step="any"
                             min="0"
                             value={run.profit ?? ""}
-                            onChange={(e) => updateProfit(run.id, e.target.value)}
+                            onChange={(e) => handleProfitChange(run.id, e.target.value)}
                             className="w-20 rounded border border-yellow-600 bg-gray-800 px-2 py-1 text-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                             placeholder="Profit"
                           />

@@ -78,5 +78,22 @@ export default function useHybridBossRuns() {
     }
   }, []);
 
-  return { runs, setRuns, addRun, removeRun, clearRuns, user };
+  // *** This is the missing update function! ***
+  const updateRun = useCallback(async (id, changes) => {
+    setRuns(prev =>
+      prev.map(run =>
+        run.id === id ? { ...run, ...changes } : run
+      )
+    );
+    if (auth.currentUser) {
+      // Find the run to update
+      const run = runs.find(r => r.id === id);
+      if (run) {
+        const updatedRun = { ...run, ...changes, uid: auth.currentUser.uid };
+        await setDoc(doc(db, "bossRuns", id), updatedRun, { merge: true });
+      }
+    }
+  }, [runs]);
+
+  return { runs, setRuns, addRun, removeRun, clearRuns, updateRun, user };
 }

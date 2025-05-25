@@ -64,12 +64,14 @@ export default function useHybridDungeonRuns() {
       await setDoc(doc(db, "dungeonRuns", run.id), { ...run, uid: auth.currentUser.uid });
     }
   }, []);
+
   const removeRun = useCallback(async (id) => {
     setRuns(prev => prev.filter(r => r.id !== id));
     if (auth.currentUser) {
       await deleteDoc(doc(db, "dungeonRuns", id));
     }
   }, []);
+
   const clearRuns = useCallback(async () => {
     setRuns([]);
     if (auth.currentUser) {
@@ -81,5 +83,18 @@ export default function useHybridDungeonRuns() {
     }
   }, []);
 
-  return { runs, setRuns, addRun, removeRun, clearRuns, user };
+  // UPDATE
+  const updateRun = useCallback(async (id, updates) => {
+    setRuns(prev =>
+      prev.map(run =>
+        run.id === id ? { ...run, ...updates } : run
+      )
+    );
+    if (auth.currentUser) {
+      const docRef = doc(db, "dungeonRuns", id);
+      await setDoc(docRef, { ...(runs.find(r => r.id === id) || {}), ...updates, uid: auth.currentUser.uid }, { merge: true });
+    }
+  }, [runs]);
+
+  return { runs, setRuns, addRun, removeRun, clearRuns, updateRun, user };
 }
