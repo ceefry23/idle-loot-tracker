@@ -5,6 +5,7 @@ import useHybridBossRuns from "./useHybridBossRuns";
 import BossForm from './BossForm';
 import CharacterSelector from '../character/CharacterSelector';
 import FilterPanel from "../../components/common/FilterPanel";
+import DatePickerFilter from "../../components/common/DatePickerFilter";
 
 const rarityColors = {
   Standard: "text-gray-200",
@@ -23,7 +24,8 @@ export default function BossPage() {
   const [filterCharacter, setFilterCharacter] = useState("");
   const [filterBoss, setFilterBoss] = useState("all");
   const [filterLoot, setFilterLoot] = useState("all");
-  const [filterRarity, setFilterRarity] = useState("all"); // <--- Rarity filter state
+  const [filterRarity, setFilterRarity] = useState("all");
+  const [filterDate, setFilterDate] = useState(null);
   const [pendingRunDelete, setPendingRunDelete] = useState(null);
   const [pendingClearAll, setPendingClearAll] = useState(false);
 
@@ -55,7 +57,7 @@ export default function BossPage() {
     return Array.from(s);
   }, [runs]);
 
-  // --- Filtering logic (with rarity) ---
+  // --- Filtering logic (with rarity and date) ---
   const filteredRuns = runs.filter((run) => {
     if (filterCharacter && run.characterId !== filterCharacter) return false;
     if (filterBoss !== "all" && run.boss !== filterBoss) return false;
@@ -65,11 +67,26 @@ export default function BossPage() {
     if (filterLoot === "ignore_chests") {
       if (run.loot?.some((l) => /chest/i.test(l.name))) return false;
     }
-    if (filterLoot !== "all" && filterLoot !== "drops" && filterLoot !== "ignore_chests") {
+    if (
+      filterLoot !== "all" &&
+      filterLoot !== "drops" &&
+      filterLoot !== "ignore_chests"
+    ) {
       if (!run.loot?.some((l) => l.name === filterLoot)) return false;
     }
     if (filterRarity !== "all") {
       if (!run.loot?.some((l) => l.rarity === filterRarity)) return false;
+    }
+    // Date filtering
+    if (filterDate) {
+      const runDate = new Date(run.date);
+      const selectedDate = new Date(filterDate);
+      if (
+        runDate.getFullYear() !== selectedDate.getFullYear() ||
+        runDate.getMonth() !== selectedDate.getMonth() ||
+        runDate.getDate() !== selectedDate.getDate()
+      )
+        return false;
     }
     return true;
   });
@@ -92,6 +109,7 @@ export default function BossPage() {
     setFilterBoss("all");
     setFilterLoot("all");
     setFilterRarity("all");
+    setFilterDate(null);
   }
   function confirmRunDelete() {
     removeRun(pendingRunDelete);
@@ -129,7 +147,7 @@ export default function BossPage() {
       </div>
 
       <FilterPanel>
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-4 items-center">
           <select
             value={filterCharacter}
             onChange={(e) => setFilterCharacter(e.target.value)}
@@ -162,7 +180,6 @@ export default function BossPage() {
               <option key={l} value={l}>{l}</option>
             ))}
           </select>
-          {/* Rarity Filter */}
           <select
             value={filterRarity}
             onChange={e => setFilterRarity(e.target.value)}
@@ -176,7 +193,7 @@ export default function BossPage() {
             <option value="Legendary">Legendary</option>
             <option value="Mythic">Mythic</option>
           </select>
-          {/* End Rarity Filter */}
+          <DatePickerFilter date={filterDate} setDate={setFilterDate} />
           <button
             onClick={clearFilters}
             className="px-4 py-2 rounded-xl bg-yellow-500 text-gray-900 font-semibold hover:bg-yellow-400 transition"
@@ -190,7 +207,19 @@ export default function BossPage() {
       <div className="text-lg font-semibold text-yellow-300 mb-6 text-center">
         Boss Runs – {charLabel} – {bossLabel} – {lootLabel()}
         {filterRarity !== "all" && <> – {filterRarity} only</>}
+        {filterDate && (
+          <>
+            {" "}
+            –{" "}
+            {new Date(filterDate).toLocaleDateString(undefined, {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })}
+          </>
+        )}
       </div>
+
 
       <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6">
         <div className="flex items-center justify-between mb-3">

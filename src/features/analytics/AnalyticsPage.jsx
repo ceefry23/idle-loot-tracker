@@ -3,6 +3,7 @@ import useHybridDungeonRuns from "../dungeon/useHybridDungeonRuns";
 import useHybridBossRuns from "../boss/useHybridBossRuns";
 import { useCharactersContext } from "../character/CharacterContext";
 import FilterPanel from "../../components/common/FilterPanel";
+import DatePickerFilter from "../../components/common/DatePickerFilter";
 
 // Helper for drop streaks
 function getDropStreaks(runs) {
@@ -34,6 +35,16 @@ function getDropStreaks(runs) {
   return { longest, current: curStreak };
 }
 
+// Helper for filtering by date
+function isSameDay(date1, date2) {
+  if (!date1 || !date2) return true;
+  const d1 = new Date(date1);
+  const d2 = new Date(date2);
+  return d1.getFullYear() === d2.getFullYear() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getDate() === d2.getDate();
+}
+
 export default function AnalyticsPage() {
   const { characters } = useCharactersContext();
   const { runs: dungeonRuns } = useHybridDungeonRuns();
@@ -43,7 +54,8 @@ export default function AnalyticsPage() {
   const [filterCharacter, setFilterCharacter] = useState("");
   const [filterDungeon, setFilterDungeon] = useState("");
   const [filterBoss, setFilterBoss] = useState("");
-  const [excludeChests, setExcludeChests] = useState(false); // <-- New
+  const [excludeChests, setExcludeChests] = useState(false);
+  const [filterDate, setFilterDate] = useState(null);
 
   // Dropdown lists
   const dungeonList = useMemo(
@@ -59,7 +71,8 @@ export default function AnalyticsPage() {
   const filteredDungeonRuns = useMemo(() => {
     const base = dungeonRuns.filter(r =>
       (!filterCharacter || r.characterId === filterCharacter) &&
-      (!filterDungeon || r.dungeon === filterDungeon)
+      (!filterDungeon || r.dungeon === filterDungeon) &&
+      (!filterDate || isSameDay(r.date, filterDate))
     );
     if (!excludeChests) return base;
     // Exclude Chest of Stones from loot for stats
@@ -67,19 +80,20 @@ export default function AnalyticsPage() {
       ...run,
       loot: run.loot?.filter(item => !/chest of stones/i.test(item.name))
     }));
-  }, [dungeonRuns, filterCharacter, filterDungeon, excludeChests]);
+  }, [dungeonRuns, filterCharacter, filterDungeon, excludeChests, filterDate]);
 
   const filteredBossRuns = useMemo(() => {
     const base = bossRuns.filter(r =>
       (!filterCharacter || r.characterId === filterCharacter) &&
-      (!filterBoss || r.boss === filterBoss)
+      (!filterBoss || r.boss === filterBoss) &&
+      (!filterDate || isSameDay(r.date, filterDate))
     );
     if (!excludeChests) return base;
     return base.map(run => ({
       ...run,
       loot: run.loot?.filter(item => !/chest of stones/i.test(item.name))
     }));
-  }, [bossRuns, filterCharacter, filterBoss, excludeChests]);
+  }, [bossRuns, filterCharacter, filterBoss, excludeChests, filterDate]);
 
   // Stats
   function aggregateRuns(runs, isBoss = false) {
@@ -102,6 +116,7 @@ export default function AnalyticsPage() {
     setFilterCharacter("");
     setFilterDungeon("");
     setFilterBoss("");
+    setFilterDate(null);
   }
 
   const charLabel = !filterCharacter
@@ -151,6 +166,9 @@ export default function AnalyticsPage() {
             <option key={b} value={b}>{b}</option>
           ))}
         </select>
+        {/* --- Date Picker Filter --- */}
+        <DatePickerFilter date={filterDate} setDate={setFilterDate} />
+        {/* --- End Date Picker Filter --- */}
         <button
           onClick={clearFilters}
           className="px-4 py-2 rounded-xl bg-yellow-500 text-gray-900 font-semibold hover:bg-yellow-400 transition"

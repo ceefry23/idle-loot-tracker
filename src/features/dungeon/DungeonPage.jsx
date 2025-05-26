@@ -1,10 +1,11 @@
 import { useState, useMemo } from "react";
 import { Trash2 } from "lucide-react";
 import { useCharactersContext } from "../character/CharacterContext";
-import useHybridDungeonRuns from './useHybridDungeonRuns';
+import useHybridDungeonRuns from "./useHybridDungeonRuns";
 import DungeonForm from "./DungeonForm";
-import CharacterSelector from '../character/CharacterSelector';
+import CharacterSelector from "../character/CharacterSelector";
 import FilterPanel from "../../components/common/FilterPanel";
+import DatePickerFilter from "../../components/common/DatePickerFilter"; // <--- NEW
 
 const rarityColors = {
   Standard: "text-gray-200",
@@ -24,15 +25,15 @@ export default function DungeonPage() {
   const [filterDungeon, setFilterDungeon] = useState("all");
   const [filterLoot, setFilterLoot] = useState("all");
   const [filterRarity, setFilterRarity] = useState("all");
+  const [filterDate, setFilterDate] = useState(null); // <--- NEW
   const [pendingRunDelete, setPendingRunDelete] = useState(null);
   const [pendingClearAll, setPendingClearAll] = useState(false);
 
   const charLabel = !filterCharacter
     ? "All Characters"
-    : characters.find(c => c.id === filterCharacter)?.name || "Unknown";
-  const dungeonLabel = filterDungeon === "all" || !filterDungeon
-    ? "All Dungeons"
-    : filterDungeon;
+    : characters.find((c) => c.id === filterCharacter)?.name || "Unknown";
+  const dungeonLabel =
+    filterDungeon === "all" || !filterDungeon ? "All Dungeons" : filterDungeon;
 
   function lootLabel() {
     if (filterLoot === "all") return "All Runs";
@@ -55,18 +56,18 @@ export default function DungeonPage() {
     return Array.from(s);
   }, [runs]);
 
-  // --- Filtering logic (now with rarity) ---
+  // --- Filtering logic (now with rarity & date) ---
   const filteredRuns = runs.filter((run) => {
     if (filterCharacter && run.characterId !== filterCharacter) return false;
     if (filterDungeon !== "all" && run.dungeon !== filterDungeon) return false;
-    if (filterLoot === "drops") {
-      if (!(run.loot?.length > 0)) return false;
-    }
-    if (filterLoot !== "all" && filterLoot !== "drops") {
-      if (!run.loot?.some((l) => l.name === filterLoot)) return false;
-    }
-    if (filterRarity !== "all") {
-      if (!run.loot?.some((l) => l.rarity === filterRarity)) return false;
+    if (filterLoot === "drops" && !(run.loot?.length > 0)) return false;
+    if (filterLoot !== "all" && filterLoot !== "drops" && !run.loot?.some((l) => l.name === filterLoot)) return false;
+    if (filterRarity !== "all" && !run.loot?.some((l) => l.rarity === filterRarity)) return false;
+    if (filterDate) {
+      // compare only date, not time
+      const runDay = new Date(run.date).toLocaleDateString("en-CA");
+      const pickDay = filterDate.toLocaleDateString("en-CA");
+      if (runDay !== pickDay) return false;
     }
     return true;
   });
@@ -85,6 +86,7 @@ export default function DungeonPage() {
     setFilterDungeon("all");
     setFilterLoot("all");
     setFilterRarity("all");
+    setFilterDate(null); // <--- clear date too
   }
 
   function confirmRunDelete() {
@@ -132,7 +134,9 @@ export default function DungeonPage() {
           >
             <option value="">All Characters</option>
             {characters.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
             ))}
           </select>
           <select
@@ -142,7 +146,9 @@ export default function DungeonPage() {
           >
             <option value="all">All Dungeons</option>
             {dungeonsRun.map((d) => (
-              <option key={d} value={d}>{d}</option>
+              <option key={d} value={d}>
+                {d}
+              </option>
             ))}
           </select>
           <select
@@ -153,12 +159,14 @@ export default function DungeonPage() {
             <option value="all">All Runs</option>
             <option value="drops">Runs With Loot</option>
             {uniqueLoots.map((l) => (
-              <option key={l} value={l}>{l}</option>
+              <option key={l} value={l}>
+                {l}
+              </option>
             ))}
           </select>
           <select
             value={filterRarity}
-            onChange={e => setFilterRarity(e.target.value)}
+            onChange={(e) => setFilterRarity(e.target.value)}
             className="border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-4 py-2"
           >
             <option value="all">All Rarities</option>
@@ -169,6 +177,7 @@ export default function DungeonPage() {
             <option value="Legendary">Legendary</option>
             <option value="Mythic">Mythic</option>
           </select>
+          <DatePickerFilter date={filterDate} setDate={setFilterDate} /> {/* <-- Calendar */}
           <button
             onClick={clearFilters}
             className="px-4 py-2 rounded-xl bg-yellow-500 text-gray-900 font-semibold hover:bg-yellow-400 transition"
@@ -182,6 +191,12 @@ export default function DungeonPage() {
       <div className="text-lg font-semibold text-yellow-300 mb-6 text-center">
         Dungeon Runs – {charLabel} – {dungeonLabel} – {lootLabel()}
         {filterRarity !== "all" && <> – {filterRarity} only</>}
+        {filterDate && (
+          <>
+            {" "}
+            – {filterDate.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })}
+          </>
+        )}
       </div>
 
       <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6">
