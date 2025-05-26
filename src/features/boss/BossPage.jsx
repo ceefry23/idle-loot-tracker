@@ -7,12 +7,12 @@ import CharacterSelector from '../character/CharacterSelector';
 import FilterPanel from "../../components/common/FilterPanel";
 
 const rarityColors = {
-  Standard: "bg-gray-700 text-gray-200 border-gray-600",
-  Refined: "bg-blue-800 text-blue-200 border-blue-400",
-  Premium: "bg-green-800 text-green-200 border-green-400",
-  Epic: "bg-red-900 text-red-300 border-red-400",
-  Legendary: "bg-yellow-500 text-yellow-900 border-yellow-300 font-extrabold",
-  Mythic: "bg-orange-600 text-orange-100 border-orange-300 font-extrabold",
+  Standard: "text-gray-200",
+  Refined: "text-blue-400",
+  Premium: "text-green-400",
+  Epic: "text-red-400 font-bold",
+  Legendary: "text-yellow-400 font-extrabold",
+  Mythic: "text-orange-300 font-extrabold",
 };
 
 export default function BossPage() {
@@ -23,6 +23,7 @@ export default function BossPage() {
   const [filterCharacter, setFilterCharacter] = useState("");
   const [filterBoss, setFilterBoss] = useState("all");
   const [filterLoot, setFilterLoot] = useState("all");
+  const [filterRarity, setFilterRarity] = useState("all"); // <--- Rarity filter state
   const [pendingRunDelete, setPendingRunDelete] = useState(null);
   const [pendingClearAll, setPendingClearAll] = useState(false);
 
@@ -33,7 +34,6 @@ export default function BossPage() {
     ? "All Bosses"
     : filterBoss;
 
-  // For loot filter label
   function lootLabel() {
     if (filterLoot === "all") return "All Runs";
     if (filterLoot === "drops") return "Runs With Loot";
@@ -55,14 +55,22 @@ export default function BossPage() {
     return Array.from(s);
   }, [runs]);
 
+  // --- Filtering logic (with rarity) ---
   const filteredRuns = runs.filter((run) => {
     if (filterCharacter && run.characterId !== filterCharacter) return false;
     if (filterBoss !== "all" && run.boss !== filterBoss) return false;
-    if (filterLoot === "drops") return run.loot?.length > 0;
-    if (filterLoot === "ignore_chests")
-      return !run.loot?.some((l) => /chest/i.test(l.name));
-    if (filterLoot !== "all")
-      return run.loot?.some((l) => l.name === filterLoot);
+    if (filterLoot === "drops") {
+      if (!(run.loot?.length > 0)) return false;
+    }
+    if (filterLoot === "ignore_chests") {
+      if (run.loot?.some((l) => /chest/i.test(l.name))) return false;
+    }
+    if (filterLoot !== "all" && filterLoot !== "drops" && filterLoot !== "ignore_chests") {
+      if (!run.loot?.some((l) => l.name === filterLoot)) return false;
+    }
+    if (filterRarity !== "all") {
+      if (!run.loot?.some((l) => l.rarity === filterRarity)) return false;
+    }
     return true;
   });
 
@@ -83,6 +91,7 @@ export default function BossPage() {
     setFilterCharacter("");
     setFilterBoss("all");
     setFilterLoot("all");
+    setFilterRarity("all");
   }
   function confirmRunDelete() {
     removeRun(pendingRunDelete);
@@ -153,6 +162,21 @@ export default function BossPage() {
               <option key={l} value={l}>{l}</option>
             ))}
           </select>
+          {/* Rarity Filter */}
+          <select
+            value={filterRarity}
+            onChange={e => setFilterRarity(e.target.value)}
+            className="border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-4 py-2"
+          >
+            <option value="all">All Rarities</option>
+            <option value="Standard">Standard</option>
+            <option value="Refined">Refined</option>
+            <option value="Premium">Premium</option>
+            <option value="Epic">Epic</option>
+            <option value="Legendary">Legendary</option>
+            <option value="Mythic">Mythic</option>
+          </select>
+          {/* End Rarity Filter */}
           <button
             onClick={clearFilters}
             className="px-4 py-2 rounded-xl bg-yellow-500 text-gray-900 font-semibold hover:bg-yellow-400 transition"
@@ -162,9 +186,10 @@ export default function BossPage() {
         </div>
       </FilterPanel>
 
-      {/* Filter summary with loot filter */}
+      {/* Filter summary with loot & rarity */}
       <div className="text-lg font-semibold text-yellow-300 mb-6 text-center">
         Boss Runs – {charLabel} – {bossLabel} – {lootLabel()}
+        {filterRarity !== "all" && <> – {filterRarity} only</>}
       </div>
 
       <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6">
@@ -231,15 +256,13 @@ export default function BossPage() {
                             run.loot.map((item) => (
                               <span
                                 key={item.name}
-                                className={`inline-block mr-2 mb-1 px-2 py-1 rounded-full border text-xs align-middle ${rarityColors[item.rarity]}`}
+                                className={`${rarityColors[item.rarity]} mr-2`}
                               >
                                 {item.name}
                               </span>
                             ))
                           ) : (
-                            <span className="bg-gray-800 text-gray-400 px-2 py-1 rounded-full border text-xs">
-                              None
-                            </span>
+                            <span className="text-gray-500">None</span>
                           )}
                         </td>
                         <td className="py-2 px-4">
@@ -275,7 +298,7 @@ export default function BossPage() {
               </table>
             </div>
             {/* Summary */}
-            <div className="mt-6 p-4 rounded-xl bg-yellow-900 bg-opacity-20 text-yellow-300 font-semibold flex justify-around max-w-md mx-auto">
+            <div className="mt-6 p-4 rounded-xl bg-gray-800 border border-yellow-700 text-yellow-300 font-semibold flex justify-around max-w-md mx-auto">
               <div>
                 <div className="text-sm">Total Cost</div>
                 <div className="text-lg text-yellow-400">${totalCost.toLocaleString()}</div>

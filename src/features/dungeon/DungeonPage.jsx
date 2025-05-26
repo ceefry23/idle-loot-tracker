@@ -7,12 +7,12 @@ import CharacterSelector from '../character/CharacterSelector';
 import FilterPanel from "../../components/common/FilterPanel";
 
 const rarityColors = {
-  Standard: "bg-gray-700 text-gray-200 border-gray-600",
-  Refined: "bg-blue-800 text-blue-200 border-blue-400",
-  Premium: "bg-green-800 text-green-200 border-green-400",
-  Epic: "bg-red-900 text-red-300 border-red-400",
-  Legendary: "bg-yellow-500 text-yellow-900 border-yellow-300 font-extrabold",
-  Mythic: "bg-orange-600 text-orange-100 border-orange-300 font-extrabold",
+  Standard: "text-gray-200",
+  Refined: "text-blue-400",
+  Premium: "text-green-400",
+  Epic: "text-red-400 font-bold",
+  Legendary: "text-yellow-400 font-extrabold",
+  Mythic: "text-orange-300 font-extrabold",
 };
 
 export default function DungeonPage() {
@@ -23,6 +23,7 @@ export default function DungeonPage() {
   const [filterCharacter, setFilterCharacter] = useState("");
   const [filterDungeon, setFilterDungeon] = useState("all");
   const [filterLoot, setFilterLoot] = useState("all");
+  const [filterRarity, setFilterRarity] = useState("all");
   const [pendingRunDelete, setPendingRunDelete] = useState(null);
   const [pendingClearAll, setPendingClearAll] = useState(false);
 
@@ -32,6 +33,12 @@ export default function DungeonPage() {
   const dungeonLabel = filterDungeon === "all" || !filterDungeon
     ? "All Dungeons"
     : filterDungeon;
+
+  function lootLabel() {
+    if (filterLoot === "all") return "All Runs";
+    if (filterLoot === "drops") return "Runs With Loot";
+    return filterLoot;
+  }
 
   const charMap = useMemo(
     () => Object.fromEntries(characters.map((c) => [c.id, c.name])),
@@ -48,11 +55,19 @@ export default function DungeonPage() {
     return Array.from(s);
   }, [runs]);
 
+  // --- Filtering logic (now with rarity) ---
   const filteredRuns = runs.filter((run) => {
     if (filterCharacter && run.characterId !== filterCharacter) return false;
     if (filterDungeon !== "all" && run.dungeon !== filterDungeon) return false;
-    if (filterLoot === "drops") return run.loot?.length > 0;
-    if (filterLoot !== "all") return run.loot?.some((l) => l.name === filterLoot);
+    if (filterLoot === "drops") {
+      if (!(run.loot?.length > 0)) return false;
+    }
+    if (filterLoot !== "all" && filterLoot !== "drops") {
+      if (!run.loot?.some((l) => l.name === filterLoot)) return false;
+    }
+    if (filterRarity !== "all") {
+      if (!run.loot?.some((l) => l.rarity === filterRarity)) return false;
+    }
     return true;
   });
 
@@ -60,11 +75,6 @@ export default function DungeonPage() {
   const totalProfit = filteredRuns.reduce((sum, r) => sum + (r.profit || 0), 0);
   const net = totalProfit - totalSpent;
 
-  // Editable cost/profit fields use updateRun
-  function handleCostChange(id, v) {
-    const value = parseFloat(v);
-    updateRun(id, { cost: isNaN(value) ? 0 : value });
-  }
   function handleProfitChange(id, v) {
     const value = parseFloat(v);
     updateRun(id, { profit: isNaN(value) ? 0 : value });
@@ -74,6 +84,7 @@ export default function DungeonPage() {
     setFilterCharacter("");
     setFilterDungeon("all");
     setFilterLoot("all");
+    setFilterRarity("all");
   }
 
   function confirmRunDelete() {
@@ -145,6 +156,19 @@ export default function DungeonPage() {
               <option key={l} value={l}>{l}</option>
             ))}
           </select>
+          <select
+            value={filterRarity}
+            onChange={e => setFilterRarity(e.target.value)}
+            className="border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-4 py-2"
+          >
+            <option value="all">All Rarities</option>
+            <option value="Standard">Standard</option>
+            <option value="Refined">Refined</option>
+            <option value="Premium">Premium</option>
+            <option value="Epic">Epic</option>
+            <option value="Legendary">Legendary</option>
+            <option value="Mythic">Mythic</option>
+          </select>
           <button
             onClick={clearFilters}
             className="px-4 py-2 rounded-xl bg-yellow-500 text-gray-900 font-semibold hover:bg-yellow-400 transition"
@@ -154,8 +178,10 @@ export default function DungeonPage() {
         </div>
       </FilterPanel>
 
+      {/* Filter summary */}
       <div className="text-lg font-semibold text-yellow-300 mb-6 text-center">
-        Dungeon Runs – {charLabel} – {dungeonLabel}
+        Dungeon Runs – {charLabel} – {dungeonLabel} – {lootLabel()}
+        {filterRarity !== "all" && <> – {filterRarity} only</>}
       </div>
 
       <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6">
@@ -206,31 +232,21 @@ export default function DungeonPage() {
                           {charMap[run.characterId] || "Unknown"}
                         </td>
                         <td className="py-2 px-4 text-yellow-100">{run.dungeon}</td>
-                        <td className="py-2 px-4">
-                          <input
-                            type="number"
-                            step="any"
-                            min="0"
-                            value={run.cost ?? ""}
-                            onChange={(e) => handleCostChange(run.id, e.target.value)}
-                            className="w-20 rounded border border-yellow-600 bg-gray-800 px-2 py-1 text-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                            placeholder="Cost"
-                          />
+                        <td className="py-2 px-4 text-yellow-200">
+                          {run.cost !== undefined && run.cost !== null ? `$${run.cost}` : "--"}
                         </td>
                         <td className="py-2 px-4">
                           {run.loot?.length ? (
                             run.loot.map((item) => (
                               <span
                                 key={item.name}
-                                className={`inline-block mr-2 mb-1 px-2 py-1 rounded-full border text-xs align-middle ${rarityColors[item.rarity]}`}
+                                className={`${rarityColors[item.rarity]} mr-2`}
                               >
                                 {item.name}
                               </span>
                             ))
                           ) : (
-                            <span className="bg-gray-800 text-gray-400 px-2 py-1 rounded-full border text-xs">
-                              None
-                            </span>
+                            <span className="text-gray-500">None</span>
                           )}
                         </td>
                         <td className="py-2 px-4">
@@ -267,7 +283,7 @@ export default function DungeonPage() {
             </div>
 
             {/* Summary */}
-            <div className="mt-6 p-4 rounded-xl bg-yellow-900 bg-opacity-20 text-yellow-300 font-semibold flex justify-around max-w-md mx-auto">
+            <div className="mt-6 p-4 rounded-xl bg-gray-800 border border-yellow-700 text-yellow-300 font-semibold flex justify-around max-w-md mx-auto">
               <div>
                 <div className="text-sm">Total Spent</div>
                 <div className="text-lg text-yellow-400">${totalSpent.toLocaleString()}</div>

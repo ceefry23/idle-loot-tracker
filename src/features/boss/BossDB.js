@@ -41,7 +41,7 @@ const BossDB = [
     ],
   },
   {
-    name: "Petrok the Guardian",
+    name: "Petrok",
     loot: [
       { name: "Wrex Egg", rarity: "Refined" },
       { name: "Vulpina Egg", rarity: "Epic" },
@@ -49,7 +49,7 @@ const BossDB = [
     ],
   },
   {
-    name: "Lurka Stonefist",
+    name: "Lurka",
     loot: [
       { name: "Draconis Egg", rarity: "Refined" },
       { name: "Fangor Egg", rarity: "Premium" },
@@ -68,7 +68,7 @@ const BossDB = [
     ],
   },
   {
-    name: "Skarn the Dreadwake",
+    name: "Skarn",
     loot: [
       { name: "Vexalia Egg", rarity: "Premium" },
       { name: "Zephyrix Egg", rarity: "Premium" },
@@ -82,7 +82,7 @@ const BossDB = [
     loot: [
       { name: "Aerion Egg", rarity: "Epic" },
       { name: "Solarix Egg", rarity: "Epic" },
-      { name: "Scalethorn egg", rarity: "Legendary" },
+      { name: "Scalethorn Egg", rarity: "Legendary" },
       { name: "Thunderhoof Egg", rarity: "Mythic" },
       { name: "Chest of Stones", rarity: "Premium" },
     ],
