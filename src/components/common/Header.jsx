@@ -8,6 +8,7 @@ import {
   signOut
 } from "firebase/auth";
 import { auth } from "../../firebase";
+import GuideModal from "../../components/common/GuideModal"; // <-- Add this import
 
 export default function Header() {
   const { user, loading } = useAuth();
@@ -17,7 +18,7 @@ export default function Header() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [showGuide, setShowGuide] = useState(false); // <--- Guide modal state
+  const [showGuide, setShowGuide] = useState(false);
 
   // Login handler
   const handleLogin = async (e) => {
@@ -62,45 +63,6 @@ export default function Header() {
       alert("Failed to logout: " + err.message);
     }
   };
-
-  // Guide Modal
-  const GuideModal = (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-60 flex items-center justify-center">
-      <div className="bg-gray-900 rounded-2xl shadow-2xl p-8 w-full max-w-md relative text-yellow-200 text-center">
-        <button
-          className="absolute top-3 right-4 text-3xl text-yellow-400 font-bold hover:text-yellow-300"
-          onClick={() => setShowGuide(false)}
-          aria-label="Close"
-        >
-          ×
-        </button>
-        <h2 className="text-2xl font-bold mb-4 text-yellow-400">IdleMMO Loot Tracker Guide</h2>
-        <ul className="mb-4 text-left list-disc list-inside text-base">
-          <li>Start out by creating a character you want to track the runs of.</li>
-          <li>Choose your character, dungeon or boss, and loot dropped, then add to run.</li>
-          <li>Log your dungeon and boss runs for advanced analytics and drop tracking.</li>
-          <li>Use the filters to sort your runs by character, dungeon, or boss.</li>
-          <li>Edit your profit margins directly in the form for more accurate tracking based on your unique sell prices.</li>
-          <li>If you would like to track travel costs for bosses, you can do that in the form also.</li>
-          <li>View stats for total spent, profit, drop streaks, and more.</li>
-          <li>Login or use guest mode – your runs are saved locally and in the cloud (if logged in).</li>
-        </ul>
-        <div className="text-sm text-yellow-400 font-semibold">
-          Questions? Contact the developer on Discord at{" "}
-          <a
-            href="https://discordapp.com/users/378638009421266947"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline"
-          >
-            ceefry23
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-  
-  
 
   // Modal Body
   const ModalBody = (
@@ -219,7 +181,7 @@ export default function Header() {
             {showModal && ModalBody}
           </>
         )}
-        {showGuide && GuideModal}
+        {showGuide && <GuideModal onClose={() => setShowGuide(false)} />} {/* USE YOUR NEW MODAL */}
       </div>
     </header>
   );
