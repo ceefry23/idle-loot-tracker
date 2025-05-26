@@ -90,7 +90,7 @@ export default function DungeonPage() {
       <img
         src="/images/idle_loot_tracker.png"
         alt="Loot Tracker Banner"
-        className="w-full max-w-md h-40 mx-auto mb-6 rounded-xl shadow-lg object-contain"
+        className="w-full max-w-md h-40 mx-auto mb-6 rounded-xl object-contain"
       />
 
       {/* Character Picker */}

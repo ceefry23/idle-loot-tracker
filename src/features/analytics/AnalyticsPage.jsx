@@ -104,7 +104,7 @@ export default function AnalyticsPage() {
       <img
         src="/images/idle_loot_tracker.png"
         alt="Loot Tracker Banner"
-        className="w-full max-w-md h-40 mx-auto mb-6 rounded-xl shadow-lg object-contain"
+        className="w-full max-w-md h-40 mx-auto mb-6 rounded-xl object-contain"
       />
 
       {/* Filter Modal, now identical row as dungeon/boss pages */}
@@ -157,13 +157,15 @@ export default function AnalyticsPage() {
           {/* Profit Stats Card (left) */}
           <div className="flex-1 bg-gray-800/80 rounded-xl p-6 flex flex-col items-center gap-2 border border-yellow-800 justify-center">
             <div className="text-yellow-300 text-md font-semibold mb-2">Profit Stats</div>
-            <div>
-              <div className="text-sm text-yellow-300">Total Spent</div>
-              <div className="text-xl font-bold text-yellow-200">${dungeonStats.totalSpent.toLocaleString()}</div>
-            </div>
-            <div>
-              <div className="text-sm text-yellow-300">Total Profit</div>
-              <div className="text-xl font-bold text-yellow-200">${dungeonStats.totalProfit.toLocaleString()}</div>
+            <div className="flex flex-row gap-8 mb-2 w-full justify-center">
+              <div>
+                <div className="text-sm text-yellow-300">Total Spent</div>
+                <div className="text-xl font-bold text-yellow-200">${dungeonStats.totalSpent.toLocaleString()}</div>
+              </div>
+              <div>
+                <div className="text-sm text-yellow-300">Total Profit</div>
+                <div className="text-xl font-bold text-yellow-200">${dungeonStats.totalProfit.toLocaleString()}</div>
+              </div>
             </div>
             <div>
               <div className="text-sm text-yellow-300">Net</div>
@@ -208,13 +210,15 @@ export default function AnalyticsPage() {
           {/* Profit Stats Card (left) */}
           <div className="flex-1 bg-gray-800/80 rounded-xl p-6 flex flex-col items-center gap-2 border border-yellow-800 justify-center">
             <div className="text-yellow-300 text-md font-semibold mb-2">Profit Stats</div>
-            <div>
-              <div className="text-sm text-yellow-300">Total Spent</div>
-              <div className="text-xl font-bold text-yellow-200">${bossStats.totalSpent.toLocaleString()}</div>
-            </div>
-            <div>
-              <div className="text-sm text-yellow-300">Total Profit</div>
-              <div className="text-xl font-bold text-yellow-200">${bossStats.totalProfit.toLocaleString()}</div>
+            <div className="flex flex-row gap-8 mb-2 w-full justify-center">
+              <div>
+                <div className="text-sm text-yellow-300">Total Spent</div>
+                <div className="text-xl font-bold text-yellow-200">${bossStats.totalSpent.toLocaleString()}</div>
+              </div>
+              <div>
+                <div className="text-sm text-yellow-300">Total Profit</div>
+                <div className="text-xl font-bold text-yellow-200">${bossStats.totalProfit.toLocaleString()}</div>
+              </div>
             </div>
             <div>
               <div className="text-sm text-yellow-300">Net</div>
