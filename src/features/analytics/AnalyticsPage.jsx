@@ -43,6 +43,7 @@ export default function AnalyticsPage() {
   const [filterCharacter, setFilterCharacter] = useState("");
   const [filterDungeon, setFilterDungeon] = useState("");
   const [filterBoss, setFilterBoss] = useState("");
+  const [excludeChests, setExcludeChests] = useState(false); // <-- New
 
   // Dropdown lists
   const dungeonList = useMemo(
@@ -56,18 +57,29 @@ export default function AnalyticsPage() {
 
   // Filtered runs
   const filteredDungeonRuns = useMemo(() => {
-    return dungeonRuns.filter(r =>
+    const base = dungeonRuns.filter(r =>
       (!filterCharacter || r.characterId === filterCharacter) &&
       (!filterDungeon || r.dungeon === filterDungeon)
     );
-  }, [dungeonRuns, filterCharacter, filterDungeon]);
+    if (!excludeChests) return base;
+    // Exclude Chest of Stones from loot for stats
+    return base.map(run => ({
+      ...run,
+      loot: run.loot?.filter(item => !/chest of stones/i.test(item.name))
+    }));
+  }, [dungeonRuns, filterCharacter, filterDungeon, excludeChests]);
 
   const filteredBossRuns = useMemo(() => {
-    return bossRuns.filter(r =>
+    const base = bossRuns.filter(r =>
       (!filterCharacter || r.characterId === filterCharacter) &&
       (!filterBoss || r.boss === filterBoss)
     );
-  }, [bossRuns, filterCharacter, filterBoss]);
+    if (!excludeChests) return base;
+    return base.map(run => ({
+      ...run,
+      loot: run.loot?.filter(item => !/chest of stones/i.test(item.name))
+    }));
+  }, [bossRuns, filterCharacter, filterBoss, excludeChests]);
 
   // Stats
   function aggregateRuns(runs, isBoss = false) {
@@ -251,6 +263,23 @@ export default function AnalyticsPage() {
               <div className="text-xl font-bold text-yellow-200">{bossStats.longestStreak}</div>
             </div>
           </div>
+        </div>
+
+        {/* Exclude Chest of Stones - styled checkbox at bottom */}
+        <div className="mt-8 w-full flex justify-center">
+          <label
+            htmlFor="exclude-chests"
+            className="flex items-center gap-2 bg-gray-800 border border-yellow-700 rounded-xl px-5 py-3 text-yellow-200 cursor-pointer hover:bg-gray-700 transition"
+          >
+            <input
+              type="checkbox"
+              id="exclude-chests"
+              checked={excludeChests}
+              onChange={e => setExcludeChests(e.target.checked)}
+              className="accent-yellow-500 w-5 h-5 rounded"
+            />
+            Exclude Chest of Stones
+          </label>
         </div>
       </section>
     </div>
