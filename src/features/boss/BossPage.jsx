@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Trash2 } from "lucide-react";
 import { useCharactersContext } from "../character/CharacterContext";
 import useHybridBossRuns from "./useHybridBossRuns";
 import BossForm from './BossForm';
@@ -6,12 +7,12 @@ import CharacterSelector from '../character/CharacterSelector';
 import FilterPanel from "../../components/common/FilterPanel";
 
 const rarityColors = {
-  Standard:  "bg-gray-700 text-gray-200 border-gray-600",
-  Refined:   "bg-blue-800 text-blue-200 border-blue-400",
-  Premium:   "bg-green-800 text-green-200 border-green-400",
-  Epic:      "bg-red-900 text-red-300 border-red-400",
+  Standard: "bg-gray-700 text-gray-200 border-gray-600",
+  Refined: "bg-blue-800 text-blue-200 border-blue-400",
+  Premium: "bg-green-800 text-green-200 border-green-400",
+  Epic: "bg-red-900 text-red-300 border-red-400",
   Legendary: "bg-yellow-500 text-yellow-900 border-yellow-300 font-extrabold",
-  Mythic:    "bg-orange-600 text-orange-100 border-orange-300 font-extrabold",
+  Mythic: "bg-orange-600 text-orange-100 border-orange-300 font-extrabold",
 };
 
 export default function BossPage() {
@@ -32,6 +33,14 @@ export default function BossPage() {
     ? "All Bosses"
     : filterBoss;
 
+  // For loot filter label
+  function lootLabel() {
+    if (filterLoot === "all") return "All Runs";
+    if (filterLoot === "drops") return "Runs With Loot";
+    if (filterLoot === "ignore_chests") return "Ignoring Chests";
+    return filterLoot;
+  }
+
   const charMap = useMemo(
     () => Object.fromEntries(characters.map((c) => [c.id, c.name])),
     [characters]
@@ -50,13 +59,16 @@ export default function BossPage() {
     if (filterCharacter && run.characterId !== filterCharacter) return false;
     if (filterBoss !== "all" && run.boss !== filterBoss) return false;
     if (filterLoot === "drops") return run.loot?.length > 0;
-    if (filterLoot !== "all") return run.loot?.some((l) => l.name === filterLoot);
+    if (filterLoot === "ignore_chests")
+      return !run.loot?.some((l) => /chest/i.test(l.name));
+    if (filterLoot !== "all")
+      return run.loot?.some((l) => l.name === filterLoot);
     return true;
   });
 
-  const totalCost   = filteredRuns.reduce((sum, r) => sum + (r.cost   || 0), 0);
+  const totalCost = filteredRuns.reduce((sum, r) => sum + (r.cost || 0), 0);
   const totalProfit = filteredRuns.reduce((sum, r) => sum + (r.reward || 0), 0);
-  const net         = totalProfit - totalCost;
+  const net = totalProfit - totalCost;
 
   function handleCostChange(id, v) {
     const value = parseFloat(v);
@@ -136,6 +148,7 @@ export default function BossPage() {
           >
             <option value="all">All Runs</option>
             <option value="drops">Runs With Loot</option>
+            <option value="ignore_chests">Ignore Chests</option>
             {uniqueLoots.map((l) => (
               <option key={l} value={l}>{l}</option>
             ))}
@@ -149,8 +162,9 @@ export default function BossPage() {
         </div>
       </FilterPanel>
 
+      {/* Filter summary with loot filter */}
       <div className="text-lg font-semibold text-yellow-300 mb-6 text-center">
-        Boss Runs – {charLabel} – {bossLabel}
+        Boss Runs – {charLabel} – {bossLabel} – {lootLabel()}
       </div>
 
       <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6">
@@ -241,17 +255,18 @@ export default function BossPage() {
                         </td>
                         <td className="py-2 px-4 text-gray-200">
                           {new Date(run.date).toLocaleDateString(undefined, {
-                            day:   "2-digit",
+                            day: "2-digit",
                             month: "short",
-                            year:  "numeric",
+                            year: "numeric",
                           })}
                         </td>
                         <td className="py-2 px-4">
                           <button
                             onClick={() => setPendingRunDelete(run.id)}
-                            className="text-xs text-red-400 hover:text-red-200 underline"
+                            className="p-1 text-red-400 hover:text-red-200 rounded transition"
+                            title="Delete Run"
                           >
-                            Delete
+                            <Trash2 size={18} />
                           </button>
                         </td>
                       </tr>
@@ -281,7 +296,7 @@ export default function BossPage() {
       </div>
 
       {/* Confirmation Modal */}
-      {(pendingRunDelete || pendingClearAll) && ( 
+      {(pendingRunDelete || pendingClearAll) && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20">
           <div className="bg-gray-900 rounded-xl p-6 max-w-sm w-full text-center">
             <h2 className="text-xl text-yellow-300 font-semibold mb-4">

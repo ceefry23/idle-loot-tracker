@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Trash2 } from "lucide-react";
 import { useCharactersContext } from "../character/CharacterContext";
 import useHybridDungeonRuns from './useHybridDungeonRuns';
 import DungeonForm from "./DungeonForm";
@@ -6,12 +7,12 @@ import CharacterSelector from '../character/CharacterSelector';
 import FilterPanel from "../../components/common/FilterPanel";
 
 const rarityColors = {
-  Standard:  "bg-gray-700 text-gray-200 border-gray-600",
-  Refined:   "bg-blue-800 text-blue-200 border-blue-400",
-  Premium:   "bg-green-800 text-green-200 border-green-400",
-  Epic:      "bg-red-900 text-red-300 border-red-400",
+  Standard: "bg-gray-700 text-gray-200 border-gray-600",
+  Refined: "bg-blue-800 text-blue-200 border-blue-400",
+  Premium: "bg-green-800 text-green-200 border-green-400",
+  Epic: "bg-red-900 text-red-300 border-red-400",
   Legendary: "bg-yellow-500 text-yellow-900 border-yellow-300 font-extrabold",
-  Mythic:    "bg-orange-600 text-orange-100 border-orange-300 font-extrabold",
+  Mythic: "bg-orange-600 text-orange-100 border-orange-300 font-extrabold",
 };
 
 export default function DungeonPage() {
@@ -49,15 +50,15 @@ export default function DungeonPage() {
 
   const filteredRuns = runs.filter((run) => {
     if (filterCharacter && run.characterId !== filterCharacter) return false;
-    if (filterDungeon !== "all" && run.dungeon !== filterDungeon)   return false;
+    if (filterDungeon !== "all" && run.dungeon !== filterDungeon) return false;
     if (filterLoot === "drops") return run.loot?.length > 0;
-    if (filterLoot !== "all")    return run.loot?.some((l) => l.name === filterLoot);
+    if (filterLoot !== "all") return run.loot?.some((l) => l.name === filterLoot);
     return true;
   });
 
-  const totalSpent  = filteredRuns.reduce((sum, r) => sum + (r.cost   || 0), 0);
+  const totalSpent = filteredRuns.reduce((sum, r) => sum + (r.cost || 0), 0);
   const totalProfit = filteredRuns.reduce((sum, r) => sum + (r.profit || 0), 0);
-  const net         = totalProfit - totalSpent;
+  const net = totalProfit - totalSpent;
 
   // Editable cost/profit fields use updateRun
   function handleCostChange(id, v) {
@@ -253,9 +254,10 @@ export default function DungeonPage() {
                         <td className="py-2 px-4">
                           <button
                             onClick={() => setPendingRunDelete(run.id)}
-                            className="text-xs text-red-400 hover:text-red-200 underline"
+                            className="p-1 text-red-400 hover:text-red-200 rounded transition"
+                            title="Delete Run"
                           >
-                            Delete
+                            <Trash2 size={18} />
                           </button>
                         </td>
                       </tr>
