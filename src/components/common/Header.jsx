@@ -78,10 +78,10 @@ export default function Header() {
         <ul className="mb-4 text-left list-disc list-inside text-base">
           <li>Start out by creating a character you want to track the runs of.</li>
           <li>Choose your character, dungeon or boss, and loot dropped, then add to run.</li>
-          <li>Use the filters to sort your runs by character, dungeon, or boss.</li>
           <li>Log your dungeon and boss runs for advanced analytics and drop tracking.</li>
+          <li>Use the filters to sort your runs by character, dungeon, or boss.</li>
           <li>Edit your profit margins directly in the form for more accurate tracking based on your unique sell prices.</li>
-          <li>If you would like to track travel costs for bosses, you can do that in the form also!</li>
+          <li>If you would like to track travel costs for bosses, you can do that in the form also.</li>
           <li>View stats for total spent, profit, drop streaks, and more.</li>
           <li>Login or use guest mode – your runs are saved locally and in the cloud (if logged in).</li>
         </ul>
