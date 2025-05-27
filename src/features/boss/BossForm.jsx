@@ -96,6 +96,7 @@ export default function BossForm({
   const [characterId, setCharacterId] = useState(defaultCharacterId);
   const [boss, setBoss] = useState(defaultBoss);
   const [loot, setLoot] = useState("None");
+  const [cost, setCost] = useState("");
 
   // Show/hide bosses
   const [hiddenBosses, toggleBossHidden] = useHiddenDropdownItems("hiddenBosses");
@@ -121,14 +122,14 @@ export default function BossForm({
     onAddRun({
       characterId,
       boss,
-      cost: currentBoss?.cost ?? 0,
+      cost: Number(cost) || 0,  // Save travel cost, default 0
       loot: lootItems,
-      reward: 0,
+      reward: 125,              // Baked-in profit
       date: timestamp,
     });
 
-    // reset just the loot
     setLoot("None");
+    setCost("");
   }
 
   // Helper to show/hide menu for bosses
@@ -142,7 +143,7 @@ export default function BossForm({
         onChange={setCharacterId}
       />
 
-      {/* Boss Dropdown with Label & Show/Hide aligned right */}
+      {/* Boss Dropdown with Show/Hide aligned right */}
       <div className="w-full">
         <div className="flex items-center mb-1">
           <label className="text-yellow-300 font-semibold">Boss</label>
@@ -204,6 +205,17 @@ export default function BossForm({
           )}
         </div>
       </div>
+
+      {/* Travel Cost input, styled like all other inputs */}
+      <input
+        type="number"
+        min="0"
+        step="any"
+        value={cost}
+        onChange={e => setCost(e.target.value)}
+        className="border border-yellow-500 bg-gray-900 text-yellow-200 placeholder-yellow-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition-all w-full"
+        placeholder="Travel Cost"
+      />
 
       <LootDropdown lootOptions={bossLoot} loot={loot} setLoot={setLoot} />
 
