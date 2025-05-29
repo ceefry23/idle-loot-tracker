@@ -97,6 +97,7 @@ export default function BossForm({
   const [boss, setBoss] = useState(defaultBoss);
   const [loot, setLoot] = useState("None");
   const [cost, setCost] = useState("");
+  const [doubleCost, setDoubleCost] = useState(false);
 
   // Show/hide bosses
   const [hiddenBosses, toggleBossHidden] = useHiddenDropdownItems("hiddenBosses");
@@ -119,17 +120,21 @@ export default function BossForm({
       ? []
       : bossLoot.filter((i) => i.name === loot);
 
+    let costValue = Number(cost) || 0;
+    if (doubleCost) costValue = costValue * 2;
+
     onAddRun({
       characterId,
       boss,
-      cost: Number(cost) || 0,  // Save travel cost, default 0
+      cost: costValue,  // Save travel cost, possibly doubled
       loot: lootItems,
-      reward: 125,              // Baked-in profit
+      reward: 125,      // Baked-in profit
       date: timestamp,
     });
 
     setLoot("None");
     setCost("");
+    setDoubleCost(false);
   }
 
   // Helper to show/hide menu for bosses
@@ -206,16 +211,35 @@ export default function BossForm({
         </div>
       </div>
 
-      {/* Travel Cost input, styled like all other inputs */}
-      <input
-        type="number"
-        min="0"
-        step="any"
-        value={cost}
-        onChange={e => setCost(e.target.value)}
-        className="border border-yellow-500 bg-gray-900 text-yellow-200 placeholder-yellow-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition-all w-full"
-        placeholder="Travel Cost"
-      />
+      {/* Travel Cost input with toggle */}
+      <div className="w-full">
+        <div className="flex items-center mb-1">
+          <label className="text-yellow-300 font-semibold">Travel Cost</label>
+          <button
+            type="button"
+            onClick={() => setDoubleCost((d) => !d)}
+            className={`text-xs px-2 py-1 ml-auto rounded border border-yellow-600 transition-all font-semibold
+    ${doubleCost
+                ? "bg-yellow-400 text-gray-900 hover:bg-yellow-300"
+                : "bg-gray-800 text-yellow-400 hover:bg-yellow-900 hover:text-yellow-200 hover:border-yellow-400"
+              }`}
+            tabIndex={-1}
+            style={{ minWidth: 130 }}
+          >
+            Double Travel Cost
+          </button>
+
+        </div>
+        <input
+          type="number"
+          min="0"
+          step="any"
+          value={cost}
+          onChange={e => setCost(e.target.value)}
+          className="border border-yellow-500 bg-gray-900 text-yellow-200 placeholder-yellow-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-yellow-400 outline-none transition-all w-full"
+          placeholder="Travel Cost"
+        />
+      </div>
 
       <LootDropdown lootOptions={bossLoot} loot={loot} setLoot={setLoot} />
 
