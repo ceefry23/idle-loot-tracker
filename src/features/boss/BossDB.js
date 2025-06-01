@@ -1,6 +1,7 @@
 const BossDB = [
   {
     name: "Isadora",
+    reward: 25,
     loot: [
       { name: "Fluffy Egg", rarity: "Standard" },
       { name: "Aquarion Egg", rarity: "Refined" },
@@ -9,6 +10,7 @@ const BossDB = [
   },
   {
     name: "Malgazar",
+    reward: 50,
     loot: [
       { name: "Shelly Egg", rarity: "Standard" },
       { name: "Furbella Egg", rarity: "Refined" },
@@ -17,6 +19,7 @@ const BossDB = [
   },
   {
     name: "Obsidianus",
+    reward: 75,
     loot: [
       { name: "Leafy Egg", rarity: "Standard" },
       { name: "Whiskers Egg", rarity: "Standard" },
@@ -26,6 +29,7 @@ const BossDB = [
   },
   {
     name: "Shadowmire",
+    reward: 100,
     loot: [
       { name: "Aquastar Egg", rarity: "Standard" },
       { name: "Nutwhisker Egg", rarity: "Refined" },
@@ -34,6 +38,7 @@ const BossDB = [
   },
   {
     name: "Rogoth",
+    reward: 125,
     loot: [
       { name: "Stardust Egg", rarity: "Refined" },
       { name: "Blooplord Egg", rarity: "Refined" },
@@ -42,14 +47,16 @@ const BossDB = [
   },
   {
     name: "Petrok",
+    reward: 125,
     loot: [
-      { name: "Wrex Egg", rarity: "Refined" },
+      { name: "Wrex Egg", rarity: "Premium" },
       { name: "Vulpina Egg", rarity: "Epic" },
       { name: "Chest of Stones", rarity: "Premium" },
     ],
   },
   {
     name: "Lurka",
+    reward: 125,
     loot: [
       { name: "Draconis Egg", rarity: "Refined" },
       { name: "Fangor Egg", rarity: "Premium" },
@@ -59,6 +66,7 @@ const BossDB = [
   },
   {
     name: "Nethrax",
+    reward: 125,
     loot: [
       { name: "Lumi Egg", rarity: "Premium" },
       { name: "Raptora Egg", rarity: "Premium" },
@@ -69,6 +77,7 @@ const BossDB = [
   },
   {
     name: "Skarn",
+    reward: 125,
     loot: [
       { name: "Vexalia Egg", rarity: "Premium" },
       { name: "Zephyrix Egg", rarity: "Premium" },
@@ -79,6 +88,7 @@ const BossDB = [
   },
   {
     name: "Voragor",
+    reward: 125,
     loot: [
       { name: "Aerion Egg", rarity: "Epic" },
       { name: "Solarix Egg", rarity: "Epic" },
@@ -89,6 +99,7 @@ const BossDB = [
   },
   {
     name: "Thal'guth",
+    reward: 125,
     loot: [
       { name: "Starmane Egg", rarity: "Epic" },
       { name: "Sauronix Egg", rarity: "Legendary" },

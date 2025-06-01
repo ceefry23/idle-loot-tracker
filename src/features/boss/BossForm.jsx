@@ -105,6 +105,7 @@ export default function BossForm({
   // find selected boss data
   const currentBoss = BossDB.find((b) => b.name === boss);
   const bossLoot = currentBoss?.loot ?? [];
+  const bossReward = currentBoss?.reward ?? 0; // <--- uses per-boss baked-in profit
 
   // sync defaults
   useEffect(() => setCharacterId(defaultCharacterId), [defaultCharacterId]);
@@ -128,7 +129,7 @@ export default function BossForm({
       boss,
       cost: costValue,  // Save travel cost, possibly doubled
       loot: lootItems,
-      reward: 125,      // Baked-in profit
+      reward: bossReward,      // Per-boss baked-in profit
       date: timestamp,
     });
 
@@ -219,7 +220,7 @@ export default function BossForm({
             type="button"
             onClick={() => setDoubleCost((d) => !d)}
             className={`text-xs px-2 py-1 ml-auto rounded border border-yellow-600 transition-all font-semibold
-    ${doubleCost
+              ${doubleCost
                 ? "bg-yellow-400 text-gray-900 hover:bg-yellow-300"
                 : "bg-gray-800 text-yellow-400 hover:bg-yellow-900 hover:text-yellow-200 hover:border-yellow-400"
               }`}
@@ -228,7 +229,6 @@ export default function BossForm({
           >
             Double Travel Cost
           </button>
-
         </div>
         <input
           type="number"
