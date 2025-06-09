@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { useCharactersContext } from "../character/CharacterContext";
 import useHybridBossRuns from "./useHybridBossRuns";
 import BossForm from './BossForm';
@@ -16,6 +16,17 @@ const rarityColors = {
   Mythic: "text-orange-300 font-extrabold",
 };
 
+const columns = [
+  { label: "#", key: "number", sortable: false },
+  { label: "Character", key: "character", sortable: true },
+  { label: "Boss", key: "boss", sortable: true },
+  { label: "Cost", key: "cost", sortable: true },
+  { label: "Loot", key: "loot", sortable: false },
+  { label: "Profit", key: "reward", sortable: true },
+  { label: "Date", key: "date", sortable: true },
+  { label: "", key: "actions", sortable: false },
+];
+
 export default function BossPage() {
   const { characters } = useCharactersContext();
   const { runs, addRun, updateRun, removeRun, clearRuns } = useHybridBossRuns();
@@ -28,6 +39,10 @@ export default function BossPage() {
   const [filterDate, setFilterDate] = useState(null);
   const [pendingRunDelete, setPendingRunDelete] = useState(null);
   const [pendingClearAll, setPendingClearAll] = useState(false);
+
+  // Sorting
+  const [sortBy, setSortBy] = useState("date");
+  const [sortDir, setSortDir] = useState("desc"); // default: newest first
 
   const charLabel = !filterCharacter
     ? "All Characters"
@@ -56,6 +71,23 @@ export default function BossPage() {
     runs.forEach((r) => r.loot?.forEach((i) => s.add(i.name)));
     return Array.from(s);
   }, [runs]);
+
+  // --- Chronological index (sticky run numbering) ---
+  const chronologicalIds = useMemo(
+    () =>
+      runs
+        .slice()
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .map((r) => r.id),
+    [runs]
+  );
+  const idToChronoNumber = useMemo(() => {
+    const map = {};
+    chronologicalIds.forEach((id, idx) => {
+      map[id] = idx + 1;
+    });
+    return map;
+  }, [chronologicalIds]);
 
   // --- Filtering logic (with rarity and date) ---
   const filteredRuns = runs.filter((run) => {
@@ -91,6 +123,40 @@ export default function BossPage() {
     return true;
   });
 
+  // --- Sorting logic ---
+  const sortedRuns = [...filteredRuns].sort((a, b) => {
+    let valA, valB;
+    switch (sortBy) {
+      case "character":
+        valA = charMap[a.characterId] || "";
+        valB = charMap[b.characterId] || "";
+        break;
+      case "boss":
+        valA = a.boss || "";
+        valB = b.boss || "";
+        break;
+      case "cost":
+        valA = a.cost || 0;
+        valB = b.cost || 0;
+        break;
+      case "reward":
+        valA = a.reward || 0;
+        valB = b.reward || 0;
+        break;
+      case "date":
+        valA = new Date(a.date);
+        valB = new Date(b.date);
+        break;
+      default:
+        valA = a[sortBy];
+        valB = b[sortBy];
+    }
+
+    if (valA < valB) return sortDir === "asc" ? -1 : 1;
+    if (valA > valB) return sortDir === "asc" ? 1 : -1;
+    return 0;
+  });
+
   const totalCost = filteredRuns.reduce((sum, r) => sum + (r.cost || 0), 0);
   const totalProfit = filteredRuns.reduce((sum, r) => sum + (r.reward || 0), 0);
   const net = totalProfit - totalCost;
@@ -118,6 +184,16 @@ export default function BossPage() {
   function confirmClearAll() {
     clearRuns();
     setPendingClearAll(false);
+  }
+
+  function handleSort(col) {
+    if (!col.sortable) return;
+    if (sortBy === col.key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(col.key);
+      setSortDir(col.key === "date" ? "desc" : "asc"); // default for date is newest first
+    }
   }
 
   return (
@@ -220,7 +296,6 @@ export default function BossPage() {
         )}
       </div>
 
-
       <div className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xl font-semibold text-yellow-300">Boss Runs</h2>
@@ -234,7 +309,7 @@ export default function BossPage() {
           )}
         </div>
 
-        {filteredRuns.length === 0 ? (
+        {sortedRuns.length === 0 ? (
           <div className="text-gray-500 py-4 text-center">
             No boss runs found.
           </div>
@@ -244,85 +319,91 @@ export default function BossPage() {
               <table className="min-w-full text-sm rounded-xl overflow-hidden">
                 <thead>
                   <tr className="bg-gray-800 text-yellow-400">
-                    <th className="py-3 px-4 text-left">Character</th>
-                    <th className="py-3 px-4 text-left">Boss</th>
-                    <th className="py-3 px-4 text-left">Cost</th>
-                    <th className="py-3 px-4 text-left">Loot</th>
-                    <th className="py-3 px-4 text-left">Profit</th>
-                    <th className="py-3 px-4 text-left">Date</th>
-                    <th className="py-3 px-4"></th>
+                    {columns.map((col) => (
+                      <th
+                        key={col.key}
+                        className="py-3 px-4 text-left select-none cursor-pointer"
+                        onClick={() => handleSort(col)}
+                      >
+                        {col.label}
+                        {col.sortable && sortBy === col.key && (
+                          sortDir === "asc" ? (
+                            <ChevronUp className="inline-block w-4 h-4 ml-1" />
+                          ) : (
+                            <ChevronDown className="inline-block w-4 h-4 ml-1" />
+                          )
+                        )}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredRuns
-                    .slice()
-                    .sort((a, b) => {
-                      const diff = new Date(b.date) - new Date(a.date);
-                      return diff || String(a.id).localeCompare(String(b.id));
-                    })
-                    .map((run) => (
-                      <tr
-                        key={run.id}
-                        className="border-b border-gray-800 hover:bg-yellow-900/10 transition"
-                      >
-                        <td className="py-2 px-4 text-yellow-200">
-                          {charMap[run.characterId] || "Unknown"}
-                        </td>
-                        <td className="py-2 px-4 text-yellow-100">{run.boss}</td>
-                        <td className="py-2 px-4">
-                          <input
-                            type="number"
-                            min="0"
-                            step="any"
-                            value={run.cost ?? ""}
-                            onChange={(e) => handleCostChange(run.id, e.target.value)}
-                            className="w-20 rounded border border-yellow-600 bg-gray-800 px-2 py-1 text-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                            placeholder="Cost"
-                          />
-                        </td>
-                        <td className="py-2 px-4">
-                          {run.loot?.length ? (
-                            run.loot.map((item) => (
-                              <span
-                                key={item.name}
-                                className={`${rarityColors[item.rarity]} mr-2`}
-                              >
-                                {item.name}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-gray-500">None</span>
-                          )}
-                        </td>
-                        <td className="py-2 px-4">
-                          <input
-                            type="number"
-                            min="0"
-                            step="any"
-                            value={run.reward ?? ""}
-                            onChange={(e) => handleProfitChange(run.id, e.target.value)}
-                            className="w-20 rounded border border-yellow-600 bg-gray-800 px-2 py-1 text-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                            placeholder="Profit"
-                          />
-                        </td>
-                        <td className="py-2 px-4 text-gray-200">
-                          {new Date(run.date).toLocaleDateString(undefined, {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </td>
-                        <td className="py-2 px-4">
-                          <button
-                            onClick={() => setPendingRunDelete(run.id)}
-                            className="p-1 text-red-400 hover:text-red-200 rounded transition"
-                            title="Delete Run"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                  {sortedRuns.map((run) => (
+                    <tr
+                      key={run.id}
+                      className="border-b border-gray-800 hover:bg-yellow-900/10 transition"
+                    >
+                      <td className="py-2 px-4 text-yellow-400 font-bold">
+                        {idToChronoNumber[run.id]}
+                      </td>
+                      <td className="py-2 px-4 text-yellow-200">
+                        {charMap[run.characterId] || "Unknown"}
+                      </td>
+                      <td className="py-2 px-4 text-yellow-100">{run.boss}</td>
+                      <td className="py-2 px-4">
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={run.cost ?? ""}
+                          onChange={(e) => handleCostChange(run.id, e.target.value)}
+                          className="w-20 rounded border border-yellow-600 bg-gray-800 px-2 py-1 text-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                          placeholder="Cost"
+                        />
+                      </td>
+                      <td className="py-2 px-4">
+                        {run.loot?.length ? (
+                          run.loot.map((item) => (
+                            <span
+                              key={item.name}
+                              className={`${rarityColors[item.rarity]} mr-2`}
+                            >
+                              {item.name}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-gray-500">None</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-4">
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={run.reward ?? ""}
+                          onChange={(e) => handleProfitChange(run.id, e.target.value)}
+                          className="w-20 rounded border border-yellow-600 bg-gray-800 px-2 py-1 text-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                          placeholder="Profit"
+                        />
+                      </td>
+                      <td className="py-2 px-4 text-gray-200">
+                        {new Date(run.date).toLocaleDateString(undefined, {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </td>
+                      <td className="py-2 px-4">
+                        <button
+                          onClick={() => setPendingRunDelete(run.id)}
+                          className="p-1 text-red-400 hover:text-red-200 rounded transition"
+                          title="Delete Run"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

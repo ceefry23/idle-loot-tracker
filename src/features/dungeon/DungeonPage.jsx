@@ -1,11 +1,11 @@
 import { useState, useMemo } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { useCharactersContext } from "../character/CharacterContext";
 import useHybridDungeonRuns from "./useHybridDungeonRuns";
 import DungeonForm from "./DungeonForm";
 import CharacterSelector from "../character/CharacterSelector";
 import FilterPanel from "../../components/common/FilterPanel";
-import DatePickerFilter from "../../components/common/DatePickerFilter"; // <--- NEW
+import DatePickerFilter from "../../components/common/DatePickerFilter";
 
 const rarityColors = {
   Standard: "text-gray-200",
@@ -16,6 +16,17 @@ const rarityColors = {
   Mythic: "text-orange-300 font-extrabold",
 };
 
+const columns = [
+  { label: "#", key: "number", sortable: false },
+  { label: "Character", key: "character", sortable: true },
+  { label: "Dungeon", key: "dungeon", sortable: true },
+  { label: "Cost", key: "cost", sortable: true },
+  { label: "Loot", key: "loot", sortable: false },
+  { label: "Profit", key: "profit", sortable: true },
+  { label: "Date", key: "date", sortable: true },
+  { label: "", key: "actions", sortable: false },
+];
+
 export default function DungeonPage() {
   const { characters } = useCharactersContext();
   const { runs, addRun, updateRun, removeRun, clearRuns } = useHybridDungeonRuns();
@@ -25,9 +36,13 @@ export default function DungeonPage() {
   const [filterDungeon, setFilterDungeon] = useState("all");
   const [filterLoot, setFilterLoot] = useState("all");
   const [filterRarity, setFilterRarity] = useState("all");
-  const [filterDate, setFilterDate] = useState(null); // <--- NEW
+  const [filterDate, setFilterDate] = useState(null);
   const [pendingRunDelete, setPendingRunDelete] = useState(null);
   const [pendingClearAll, setPendingClearAll] = useState(false);
+
+  // Sorting
+  const [sortBy, setSortBy] = useState("date");
+  const [sortDir, setSortDir] = useState("desc"); // default: newest first
 
   const charLabel = !filterCharacter
     ? "All Characters"
@@ -56,6 +71,23 @@ export default function DungeonPage() {
     return Array.from(s);
   }, [runs]);
 
+  // --- Chronological index (sticky run numbering) ---
+  const chronologicalIds = useMemo(
+    () =>
+      runs
+        .slice()
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .map((r) => r.id),
+    [runs]
+  );
+  const idToChronoNumber = useMemo(() => {
+    const map = {};
+    chronologicalIds.forEach((id, idx) => {
+      map[id] = idx + 1;
+    });
+    return map;
+  }, [chronologicalIds]);
+
   // --- Filtering logic (now with rarity & date) ---
   const filteredRuns = runs.filter((run) => {
     if (filterCharacter && run.characterId !== filterCharacter) return false;
@@ -64,12 +96,44 @@ export default function DungeonPage() {
     if (filterLoot !== "all" && filterLoot !== "drops" && !run.loot?.some((l) => l.name === filterLoot)) return false;
     if (filterRarity !== "all" && !run.loot?.some((l) => l.rarity === filterRarity)) return false;
     if (filterDate) {
-      // compare only date, not time
       const runDay = new Date(run.date).toLocaleDateString("en-CA");
       const pickDay = filterDate.toLocaleDateString("en-CA");
       if (runDay !== pickDay) return false;
     }
     return true;
+  });
+
+  // --- Sorting logic ---
+  const sortedRuns = [...filteredRuns].sort((a, b) => {
+    let valA, valB;
+    switch (sortBy) {
+      case "character":
+        valA = charMap[a.characterId] || "";
+        valB = charMap[b.characterId] || "";
+        break;
+      case "dungeon":
+        valA = a.dungeon || "";
+        valB = b.dungeon || "";
+        break;
+      case "cost":
+        valA = a.cost || 0;
+        valB = b.cost || 0;
+        break;
+      case "profit":
+        valA = a.profit || 0;
+        valB = b.profit || 0;
+        break;
+      case "date":
+        valA = new Date(a.date);
+        valB = new Date(b.date);
+        break;
+      default:
+        valA = a[sortBy];
+        valB = b[sortBy];
+    }
+    if (valA < valB) return sortDir === "asc" ? -1 : 1;
+    if (valA > valB) return sortDir === "asc" ? 1 : -1;
+    return 0;
   });
 
   const totalSpent = filteredRuns.reduce((sum, r) => sum + (r.cost || 0), 0);
@@ -86,7 +150,7 @@ export default function DungeonPage() {
     setFilterDungeon("all");
     setFilterLoot("all");
     setFilterRarity("all");
-    setFilterDate(null); // <--- clear date too
+    setFilterDate(null);
   }
 
   function confirmRunDelete() {
@@ -96,6 +160,16 @@ export default function DungeonPage() {
   function confirmClearAll() {
     clearRuns();
     setPendingClearAll(false);
+  }
+
+  function handleSort(col) {
+    if (!col.sortable) return;
+    if (sortBy === col.key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(col.key);
+      setSortDir(col.key === "date" ? "desc" : "asc");
+    }
   }
 
   return (
@@ -212,7 +286,7 @@ export default function DungeonPage() {
           )}
         </div>
 
-        {filteredRuns.length === 0 ? (
+        {sortedRuns.length === 0 ? (
           <div className="text-gray-500 py-4 text-center">
             No dungeon runs found.
           </div>
@@ -222,77 +296,83 @@ export default function DungeonPage() {
               <table className="min-w-full text-sm rounded-xl overflow-hidden">
                 <thead>
                   <tr className="bg-gray-800 text-yellow-400">
-                    <th className="py-3 px-4 text-left">Character</th>
-                    <th className="py-3 px-4 text-left">Dungeon</th>
-                    <th className="py-3 px-4 text-left">Cost</th>
-                    <th className="py-3 px-4 text-left">Loot</th>
-                    <th className="py-3 px-4 text-left">Profit</th>
-                    <th className="py-3 px-4 text-left">Date</th>
-                    <th className="py-3 px-4 text-left"></th>
+                    {columns.map((col) => (
+                      <th
+                        key={col.key}
+                        className="py-3 px-4 text-left select-none cursor-pointer"
+                        onClick={() => handleSort(col)}
+                      >
+                        {col.label}
+                        {col.sortable && sortBy === col.key && (
+                          sortDir === "asc" ? (
+                            <ChevronUp className="inline-block w-4 h-4 ml-1" />
+                          ) : (
+                            <ChevronDown className="inline-block w-4 h-4 ml-1" />
+                          )
+                        )}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredRuns
-                    .slice()
-                    .sort((a, b) => {
-                      const diff = new Date(b.date) - new Date(a.date);
-                      return diff || String(b.id).localeCompare(String(a.id));
-                    })
-                    .map((run) => (
-                      <tr
-                        key={run.id}
-                        className="border-b border-gray-800 hover:bg-yellow-900/10 transition"
-                      >
-                        <td className="py-2 px-4 text-yellow-200">
-                          {charMap[run.characterId] || "Unknown"}
-                        </td>
-                        <td className="py-2 px-4 text-yellow-100">{run.dungeon}</td>
-                        <td className="py-2 px-4 text-yellow-200">
-                          {run.cost !== undefined && run.cost !== null ? `$${run.cost}` : "--"}
-                        </td>
-                        <td className="py-2 px-4">
-                          {run.loot?.length ? (
-                            run.loot.map((item) => (
-                              <span
-                                key={item.name}
-                                className={`${rarityColors[item.rarity]} mr-2`}
-                              >
-                                {item.name}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-gray-500">None</span>
-                          )}
-                        </td>
-                        <td className="py-2 px-4">
-                          <input
-                            type="number"
-                            step="any"
-                            min="0"
-                            value={run.profit ?? ""}
-                            onChange={(e) => handleProfitChange(run.id, e.target.value)}
-                            className="w-20 rounded border border-yellow-600 bg-gray-800 px-2 py-1 text-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                            placeholder="Profit"
-                          />
-                        </td>
-                        <td className="py-2 px-4 text-gray-200">
-                          {new Date(run.date).toLocaleDateString(undefined, {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </td>
-                        <td className="py-2 px-4">
-                          <button
-                            onClick={() => setPendingRunDelete(run.id)}
-                            className="p-1 text-red-400 hover:text-red-200 rounded transition"
-                            title="Delete Run"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                  {sortedRuns.map((run) => (
+                    <tr
+                      key={run.id}
+                      className="border-b border-gray-800 hover:bg-yellow-900/10 transition"
+                    >
+                      <td className="py-2 px-4 text-yellow-400 font-bold">
+                        {idToChronoNumber[run.id]}
+                      </td>
+                      <td className="py-2 px-4 text-yellow-200">
+                        {charMap[run.characterId] || "Unknown"}
+                      </td>
+                      <td className="py-2 px-4 text-yellow-100">{run.dungeon}</td>
+                      <td className="py-2 px-4 text-yellow-200">
+                        {run.cost !== undefined && run.cost !== null ? `$${run.cost}` : "--"}
+                      </td>
+                      <td className="py-2 px-4">
+                        {run.loot?.length ? (
+                          run.loot.map((item) => (
+                            <span
+                              key={item.name}
+                              className={`${rarityColors[item.rarity]} mr-2`}
+                            >
+                              {item.name}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-gray-500">None</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-4">
+                        <input
+                          type="number"
+                          step="any"
+                          min="0"
+                          value={run.profit ?? ""}
+                          onChange={(e) => handleProfitChange(run.id, e.target.value)}
+                          className="w-20 rounded border border-yellow-600 bg-gray-800 px-2 py-1 text-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                          placeholder="Profit"
+                        />
+                      </td>
+                      <td className="py-2 px-4 text-gray-200">
+                        {new Date(run.date).toLocaleDateString(undefined, {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </td>
+                      <td className="py-2 px-4">
+                        <button
+                          onClick={() => setPendingRunDelete(run.id)}
+                          className="p-1 text-red-400 hover:text-red-200 rounded transition"
+                          title="Delete Run"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
