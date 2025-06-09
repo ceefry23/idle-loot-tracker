@@ -34,17 +34,33 @@ const RARITY_COLORS = {
   Legendary: "#f7d038",
   Mythic: "#79ffe1",
 };
-const PRIMARY_COLOR = "#f7d038";     // For profit lines and bars
-const SECONDARY_COLOR = "#24b0ff";  // Accent color for bars/labels
+const PRIMARY_COLOR = "#f7d038";
+const SECONDARY_COLOR = "#24b0ff";
 
-// Drop streaks helper
-function getDropStreaks(runs) {
+// For streak dropdowns
+const RARITY_OPTIONS = [
+  { value: "all", label: "Any" },
+  { value: "Standard", label: "Standard" },
+  { value: "Refined", label: "Refined" },
+  { value: "Premium", label: "Premium" },
+  { value: "Epic", label: "Epic" },
+  { value: "Legendary", label: "Legendary" },
+  { value: "Mythic", label: "Mythic" },
+];
+
+// Drop streaks helper (supports rarity)
+function getDropStreaks(runs, rarity = "all") {
   const sorted = runs
     .slice()
     .sort((a, b) => new Date(a.date) - new Date(b.date));
   let longest = 0, current = 0, maxSoFar = 0;
   for (let i = 0; i < sorted.length; i++) {
-    if (!sorted[i].loot || sorted[i].loot.length === 0) {
+    const loot = sorted[i].loot ?? [];
+    const isDrop =
+      rarity === "all"
+        ? loot.length > 0
+        : loot.some(l => l.rarity === rarity);
+    if (!isDrop) {
       current++;
       if (current > maxSoFar) maxSoFar = current;
     } else {
@@ -54,7 +70,12 @@ function getDropStreaks(runs) {
   longest = maxSoFar;
   let curStreak = 0;
   for (let i = sorted.length - 1; i >= 0; i--) {
-    if (!sorted[i].loot || sorted[i].loot.length === 0) {
+    const loot = sorted[i].loot ?? [];
+    const isDrop =
+      rarity === "all"
+        ? loot.length > 0
+        : loot.some(l => l.rarity === rarity);
+    if (!isDrop) {
       curStreak++;
     } else {
       break;
@@ -94,8 +115,6 @@ function pieDataFromCounts(counts) {
       value: count,
     }));
 }
-// ---- NEW CHART HELPERS ----
-// Group by day, sum profit
 function profitSeries(runs, isBoss = false) {
   const daily = {};
   for (const run of runs) {
@@ -107,10 +126,8 @@ function profitSeries(runs, isBoss = false) {
     }
     daily[key].profit += isBoss ? (run.reward ?? 0) - (run.cost ?? 0) : (run.profit ?? 0) - (run.cost ?? 0);
   }
-  // Sort by date
   return Object.values(daily).sort((a, b) => new Date(a.date) - new Date(b.date));
 }
-// Bar: Drops per Dungeon/Boss
 function dropsPerThing(runs, field = "dungeon") {
   const group = {};
   for (const run of runs) {
@@ -122,7 +139,6 @@ function dropsPerThing(runs, field = "dungeon") {
     .map(([name, drops]) => ({ name, drops }))
     .sort((a, b) => b.drops - a.drops);
 }
-// Bar: Character Leaderboard
 function characterLeaderboard(runs, characters, isBoss = false) {
   const stats = {};
   for (const run of runs) {
@@ -133,9 +149,6 @@ function characterLeaderboard(runs, characters, isBoss = false) {
   }
   return Object.values(stats).sort((a, b) => b.profit - a.profit);
 }
-// ---- END CHART HELPERS ----
-
-// Pie label (readable)
 function PieLabel({ name, percent, x, y }) {
   return (
     <text
@@ -198,6 +211,7 @@ function PieChartByRarity({ counts }) {
     </div>
   );
 }
+
 export default function AnalyticsPage() {
   const { characters } = useCharactersContext();
   const { runs: dungeonRuns } = useHybridDungeonRuns();
@@ -210,7 +224,10 @@ export default function AnalyticsPage() {
   const [excludeChests, setExcludeChests] = useState(false);
   const [filterDate, setFilterDate] = useState(null);
 
-  // Dropdown lists
+  // Streak rarity selectors (NEW)
+  const [dungeonStreakRarity, setDungeonStreakRarity] = useState("all");
+  const [bossStreakRarity, setBossStreakRarity] = useState("all");
+
   const dungeonList = useMemo(
     () => Array.from(new Set(dungeonRuns.map(r => r.dungeon))),
     [dungeonRuns]
@@ -220,7 +237,6 @@ export default function AnalyticsPage() {
     [bossRuns]
   );
 
-  // Filtered runs
   const filteredDungeonRuns = useMemo(() => {
     const base = dungeonRuns.filter(r =>
       (!filterCharacter || r.characterId === filterCharacter) &&
@@ -246,8 +262,7 @@ export default function AnalyticsPage() {
     }));
   }, [bossRuns, filterCharacter, filterBoss, excludeChests, filterDate]);
 
-  // Stats
-  function aggregateRuns(runs, isBoss = false) {
+  function aggregateRuns(runs, isBoss = false, streakRarity = "all") {
     const totalRuns = runs.length;
     const totalSpent = runs.reduce((sum, run) => sum + (run.cost ?? 0), 0);
     const totalProfit = runs.reduce((sum, run) => sum + (isBoss ? (run.reward ?? 0) : (run.profit ?? 0)), 0);
@@ -255,15 +270,21 @@ export default function AnalyticsPage() {
     const totalDrops = runs.reduce((sum, run) => sum + (run.loot ? run.loot.length : 0), 0);
     const runsWithDrops = runs.filter(run => run.loot && run.loot.length > 0).length;
     const percentWithDrops = totalRuns > 0 ? ((runsWithDrops / totalRuns) * 100).toFixed(1) : "0.0";
-    const { longest, current } = getDropStreaks(runs);
+    const { longest, current } = getDropStreaks(runs, streakRarity);
     return { totalRuns, totalSpent, totalProfit, totalNet, totalDrops, percentWithDrops, runsWithoutDrop: current, longestStreak: longest };
   }
-  const dungeonStats = useMemo(() => aggregateRuns(filteredDungeonRuns), [filteredDungeonRuns]);
-  const bossStats = useMemo(() => aggregateRuns(filteredBossRuns, true), [filteredBossRuns]);
-  // Rarity distribution
+
+  const dungeonStats = useMemo(
+    () => aggregateRuns(filteredDungeonRuns, false, dungeonStreakRarity),
+    [filteredDungeonRuns, dungeonStreakRarity]
+  );
+  const bossStats = useMemo(
+    () => aggregateRuns(filteredBossRuns, true, bossStreakRarity),
+    [filteredBossRuns, bossStreakRarity]
+  );
+
   const dungeonRarityCounts = useMemo(() => countDropsByRarity(filteredDungeonRuns), [filteredDungeonRuns]);
   const bossRarityCounts = useMemo(() => countDropsByRarity(filteredBossRuns), [filteredBossRuns]);
-  // New chart series:
   const dungeonProfitSeries = useMemo(() => profitSeries(filteredDungeonRuns), [filteredDungeonRuns]);
   const bossProfitSeries = useMemo(() => profitSeries(filteredBossRuns, true), [filteredBossRuns]);
   const dungeonDropsBar = useMemo(() => dropsPerThing(filteredDungeonRuns, "dungeon"), [filteredDungeonRuns]);
@@ -271,13 +292,13 @@ export default function AnalyticsPage() {
   const dungeonLeaderboard = useMemo(() => characterLeaderboard(filteredDungeonRuns, characters), [filteredDungeonRuns, characters]);
   const bossLeaderboard = useMemo(() => characterLeaderboard(filteredBossRuns, characters, true), [filteredBossRuns, characters]);
 
-  // Filter reset
   function clearFilters() {
     setFilterCharacter("");
     setFilterDungeon("");
     setFilterBoss("");
     setFilterDate(null);
   }
+
   const charLabel = !filterCharacter
     ? "All Characters"
     : characters.find(c => c.id === filterCharacter)?.name || "Unknown";
@@ -291,7 +312,6 @@ export default function AnalyticsPage() {
         alt="Loot Tracker Banner"
         className="w-full max-w-md h-40 mx-auto mb-6 rounded-xl object-contain"
       />
-      {/* Filter Modal, now identical row as dungeon/boss pages */}
       <FilterPanel>
         <select
           value={filterCharacter}
@@ -339,7 +359,7 @@ export default function AnalyticsPage() {
           Dungeon Runs – {charLabel} – {dungeonLabel}
         </div>
         <div className="w-full flex flex-col md:flex-row gap-6 justify-center items-center text-center">
-          {/* Profit Stats Card (left) */}
+          {/* Profit Stats Card */}
           <div className="flex-1 bg-gray-800/80 rounded-xl p-6 flex flex-col items-center gap-2 border border-yellow-800 justify-center">
             <div className="text-yellow-300 text-md font-semibold mb-2">Profit Stats</div>
             <div className="flex flex-row gap-8 mb-2 w-full justify-center">
@@ -359,7 +379,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
           </div>
-          {/* Run/Drop Stats Card (right) */}
+          {/* Run/Drop Stats Card */}
           <div className="flex-1 bg-gray-800/80 rounded-xl p-6 flex flex-col items-center gap-2 border border-yellow-800 justify-center">
             <div className="text-yellow-300 text-md font-semibold mb-2">Run/Drop Stats</div>
             <div>
@@ -374,12 +394,29 @@ export default function AnalyticsPage() {
               <div className="text-sm text-yellow-300">% With Drops</div>
               <div className="text-xl font-bold text-yellow-200">{dungeonStats.percentWithDrops}%</div>
             </div>
+            {/* NEW: Drop streak rarity selector */}
+            <div className="flex items-center gap-2 mt-3">
+              <label className="text-sm text-yellow-300">Drop Streak Rarity:</label>
+              <select
+                value={dungeonStreakRarity}
+                onChange={e => setDungeonStreakRarity(e.target.value)}
+                className="border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-2 py-1"
+              >
+                {RARITY_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
             <div>
-              <div className="text-sm text-yellow-300">Current Runs Without a Drop</div>
+              <div className="text-sm text-yellow-300">
+                Current Runs Without a Drop{dungeonStreakRarity !== "all" ? ` (${dungeonStreakRarity})` : ""}
+              </div>
               <div className="text-xl font-bold text-yellow-200">{dungeonStats.runsWithoutDrop}</div>
             </div>
             <div>
-              <div className="text-sm text-yellow-300">Longest Run Without a Drop</div>
+              <div className="text-sm text-yellow-300">
+                Longest Run Without a Drop{dungeonStreakRarity !== "all" ? ` (${dungeonStreakRarity})` : ""}
+              </div>
               <div className="text-xl font-bold text-yellow-200">{dungeonStats.longestStreak}</div>
             </div>
           </div>
@@ -447,7 +484,7 @@ export default function AnalyticsPage() {
           Boss Runs – {charLabel} – {bossLabel}
         </div>
         <div className="w-full flex flex-col md:flex-row gap-6 justify-center items-center text-center">
-          {/* Profit Stats Card (left) */}
+          {/* Profit Stats Card */}
           <div className="flex-1 bg-gray-800/80 rounded-xl p-6 flex flex-col items-center gap-2 border border-yellow-800 justify-center">
             <div className="text-yellow-300 text-md font-semibold mb-2">Profit Stats</div>
             <div className="flex flex-row gap-8 mb-2 w-full justify-center">
@@ -467,7 +504,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
           </div>
-          {/* Run/Drop Stats Card (right) */}
+          {/* Run/Drop Stats Card */}
           <div className="flex-1 bg-gray-800/80 rounded-xl p-6 flex flex-col items-center gap-2 border border-yellow-800 justify-center">
             <div className="text-yellow-300 text-md font-semibold mb-2">Run/Drop Stats</div>
             <div>
@@ -482,12 +519,29 @@ export default function AnalyticsPage() {
               <div className="text-sm text-yellow-300">% With Drops</div>
               <div className="text-xl font-bold text-yellow-200">{bossStats.percentWithDrops}%</div>
             </div>
+            {/* NEW: Drop streak rarity selector */}
+            <div className="flex items-center gap-2 mt-3">
+              <label className="text-sm text-yellow-300">Drop Streak Rarity:</label>
+              <select
+                value={bossStreakRarity}
+                onChange={e => setBossStreakRarity(e.target.value)}
+                className="border border-yellow-500 bg-gray-900 text-yellow-200 rounded-xl px-2 py-1"
+              >
+                {RARITY_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
             <div>
-              <div className="text-sm text-yellow-300">Current Runs Without a Drop</div>
+              <div className="text-sm text-yellow-300">
+                Current Runs Without a Drop{bossStreakRarity !== "all" ? ` (${bossStreakRarity})` : ""}
+              </div>
               <div className="text-xl font-bold text-yellow-200">{bossStats.runsWithoutDrop}</div>
             </div>
             <div>
-              <div className="text-sm text-yellow-300">Longest Run Without a Drop</div>
+              <div className="text-sm text-yellow-300">
+                Longest Run Without a Drop{bossStreakRarity !== "all" ? ` (${bossStreakRarity})` : ""}
+              </div>
               <div className="text-xl font-bold text-yellow-200">{bossStats.longestStreak}</div>
             </div>
           </div>
