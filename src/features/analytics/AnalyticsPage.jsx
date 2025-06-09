@@ -4,15 +4,45 @@ import useHybridBossRuns from "../boss/useHybridBossRuns";
 import { useCharactersContext } from "../character/CharacterContext";
 import FilterPanel from "../../components/common/FilterPanel";
 import DatePickerFilter from "../../components/common/DatePickerFilter";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  BarChart,
+  Bar,
+  LabelList,
+} from "recharts";
 
-// Helper for drop streaks
+// Theme colors for charts
+const RARITIES = [
+  "None", "Standard", "Refined", "Premium", "Epic", "Legendary", "Mythic"
+];
+const RARITY_COLORS = {
+  None: "#3b4252",
+  Standard: "#a3b1c6",
+  Refined: "#24b0ff",
+  Premium: "#37ebc8",
+  Epic: "#fc618d",
+  Legendary: "#f7d038",
+  Mythic: "#79ffe1",
+};
+const PRIMARY_COLOR = "#f7d038";     // For profit lines and bars
+const SECONDARY_COLOR = "#24b0ff";  // Accent color for bars/labels
+
+// Drop streaks helper
 function getDropStreaks(runs) {
   const sorted = runs
     .slice()
     .sort((a, b) => new Date(a.date) - new Date(b.date));
-
   let longest = 0, current = 0, maxSoFar = 0;
-
   for (let i = 0; i < sorted.length; i++) {
     if (!sorted[i].loot || sorted[i].loot.length === 0) {
       current++;
@@ -22,7 +52,6 @@ function getDropStreaks(runs) {
     }
   }
   longest = maxSoFar;
-
   let curStreak = 0;
   for (let i = sorted.length - 1; i >= 0; i--) {
     if (!sorted[i].loot || sorted[i].loot.length === 0) {
@@ -31,20 +60,144 @@ function getDropStreaks(runs) {
       break;
     }
   }
-
   return { longest, current: curStreak };
 }
 
-// Helper for filtering by date
 function isSameDay(date1, date2) {
   if (!date1 || !date2) return true;
-  const d1 = new Date(date1);
-  const d2 = new Date(date2);
+  const d1 = new Date(date1), d2 = new Date(date2);
   return d1.getFullYear() === d2.getFullYear() &&
     d1.getMonth() === d2.getMonth() &&
     d1.getDate() === d2.getDate();
 }
 
+function countDropsByRarity(runs) {
+  const counts = Object.fromEntries(RARITIES.map(r => [r, 0]));
+  for (const run of runs) {
+    if (!run.loot || run.loot.length === 0) {
+      counts["None"]++;
+    } else {
+      for (const item of run.loot) {
+        if (RARITIES.includes(item.rarity)) {
+          counts[item.rarity]++;
+        }
+      }
+    }
+  }
+  return counts;
+}
+function pieDataFromCounts(counts) {
+  return Object.entries(counts)
+    .filter(([_, count]) => count > 0)
+    .map(([rarity, count]) => ({
+      name: rarity,
+      value: count,
+    }));
+}
+// ---- NEW CHART HELPERS ----
+// Group by day, sum profit
+function profitSeries(runs, isBoss = false) {
+  const daily = {};
+  for (const run of runs) {
+    const date = new Date(run.date);
+    if (isNaN(date)) continue;
+    const key = date.toLocaleDateString();
+    if (!daily[key]) {
+      daily[key] = { date: key, profit: 0 };
+    }
+    daily[key].profit += isBoss ? (run.reward ?? 0) - (run.cost ?? 0) : (run.profit ?? 0) - (run.cost ?? 0);
+  }
+  // Sort by date
+  return Object.values(daily).sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+// Bar: Drops per Dungeon/Boss
+function dropsPerThing(runs, field = "dungeon") {
+  const group = {};
+  for (const run of runs) {
+    const key = run[field] || "Unknown";
+    if (!group[key]) group[key] = 0;
+    if (run.loot && run.loot.length > 0) group[key] += run.loot.length;
+  }
+  return Object.entries(group)
+    .map(([name, drops]) => ({ name, drops }))
+    .sort((a, b) => b.drops - a.drops);
+}
+// Bar: Character Leaderboard
+function characterLeaderboard(runs, characters, isBoss = false) {
+  const stats = {};
+  for (const run of runs) {
+    const char = run.characterId || "Unknown";
+    if (!stats[char]) stats[char] = { char, runs: 0, profit: 0, name: characters.find(c => c.id === char)?.name || "Unknown" };
+    stats[char].runs += 1;
+    stats[char].profit += isBoss ? (run.reward ?? 0) - (run.cost ?? 0) : (run.profit ?? 0) - (run.cost ?? 0);
+  }
+  return Object.values(stats).sort((a, b) => b.profit - a.profit);
+}
+// ---- END CHART HELPERS ----
+
+// Pie label (readable)
+function PieLabel({ name, percent, x, y }) {
+  return (
+    <text
+      x={x}
+      y={y}
+      textAnchor="middle"
+      dominantBaseline="middle"
+      fontSize={16}
+      fontWeight={700}
+      fill="#fff"
+      stroke="#222"
+      strokeWidth={2}
+      paintOrder="stroke"
+      style={{ textShadow: "0 1px 8px #222a,0 1px 8px #000b" }}
+    >
+      {`${name}: ${(percent * 100).toFixed(1)}%`}
+    </text>
+  );
+}
+function PieChartByRarity({ counts }) {
+  const data = pieDataFromCounts(counts);
+  if (!data.length) return null;
+  return (
+    <div style={{ margin: "28px 0 36px 0" }}>
+      <ResponsiveContainer width="100%" height={270}>
+        <PieChart>
+          <Pie
+            data={data}
+            dataKey="value"
+            nameKey="name"
+            cx="50%"
+            cy="50%"
+            outerRadius={95}
+            innerRadius={42}
+            labelLine={true}
+            label={PieLabel}
+            paddingAngle={5}
+          >
+            {data.map((entry) => (
+              <Cell
+                key={entry.name}
+                fill={RARITY_COLORS[entry.name] || "#888"}
+                stroke="#222"
+                strokeWidth={2}
+              />
+            ))}
+          </Pie>
+          <Tooltip />
+          <Legend
+            iconType="circle"
+            formatter={(value) => (
+              <span style={{ color: RARITY_COLORS[value] || "#eee", fontWeight: 600, fontSize: 16 }}>
+                {value}
+              </span>
+            )}
+            wrapperStyle={{ paddingTop: "10px", color: "#e0e0e0", fontSize: 15 }}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
 export default function AnalyticsPage() {
   const { characters } = useCharactersContext();
   const { runs: dungeonRuns } = useHybridDungeonRuns();
@@ -75,13 +228,11 @@ export default function AnalyticsPage() {
       (!filterDate || isSameDay(r.date, filterDate))
     );
     if (!excludeChests) return base;
-    // Exclude Chest of Stones from loot for stats
     return base.map(run => ({
       ...run,
       loot: run.loot?.filter(item => !/chest of stones/i.test(item.name))
     }));
   }, [dungeonRuns, filterCharacter, filterDungeon, excludeChests, filterDate]);
-
   const filteredBossRuns = useMemo(() => {
     const base = bossRuns.filter(r =>
       (!filterCharacter || r.characterId === filterCharacter) &&
@@ -107,9 +258,18 @@ export default function AnalyticsPage() {
     const { longest, current } = getDropStreaks(runs);
     return { totalRuns, totalSpent, totalProfit, totalNet, totalDrops, percentWithDrops, runsWithoutDrop: current, longestStreak: longest };
   }
-
   const dungeonStats = useMemo(() => aggregateRuns(filteredDungeonRuns), [filteredDungeonRuns]);
   const bossStats = useMemo(() => aggregateRuns(filteredBossRuns, true), [filteredBossRuns]);
+  // Rarity distribution
+  const dungeonRarityCounts = useMemo(() => countDropsByRarity(filteredDungeonRuns), [filteredDungeonRuns]);
+  const bossRarityCounts = useMemo(() => countDropsByRarity(filteredBossRuns), [filteredBossRuns]);
+  // New chart series:
+  const dungeonProfitSeries = useMemo(() => profitSeries(filteredDungeonRuns), [filteredDungeonRuns]);
+  const bossProfitSeries = useMemo(() => profitSeries(filteredBossRuns, true), [filteredBossRuns]);
+  const dungeonDropsBar = useMemo(() => dropsPerThing(filteredDungeonRuns, "dungeon"), [filteredDungeonRuns]);
+  const bossDropsBar = useMemo(() => dropsPerThing(filteredBossRuns, "boss"), [filteredBossRuns]);
+  const dungeonLeaderboard = useMemo(() => characterLeaderboard(filteredDungeonRuns, characters), [filteredDungeonRuns, characters]);
+  const bossLeaderboard = useMemo(() => characterLeaderboard(filteredBossRuns, characters, true), [filteredBossRuns, characters]);
 
   // Filter reset
   function clearFilters() {
@@ -118,11 +278,9 @@ export default function AnalyticsPage() {
     setFilterBoss("");
     setFilterDate(null);
   }
-
   const charLabel = !filterCharacter
     ? "All Characters"
     : characters.find(c => c.id === filterCharacter)?.name || "Unknown";
-
   const dungeonLabel = !filterDungeon ? "All Dungeons" : filterDungeon;
   const bossLabel = !filterBoss ? "All Bosses" : filterBoss;
 
@@ -133,7 +291,6 @@ export default function AnalyticsPage() {
         alt="Loot Tracker Banner"
         className="w-full max-w-md h-40 mx-auto mb-6 rounded-xl object-contain"
       />
-
       {/* Filter Modal, now identical row as dungeon/boss pages */}
       <FilterPanel>
         <select
@@ -166,9 +323,7 @@ export default function AnalyticsPage() {
             <option key={b} value={b}>{b}</option>
           ))}
         </select>
-        {/* --- Date Picker Filter --- */}
         <DatePickerFilter date={filterDate} setDate={setFilterDate} />
-        {/* --- End Date Picker Filter --- */}
         <button
           onClick={clearFilters}
           className="px-4 py-2 rounded-xl bg-yellow-500 text-gray-900 font-semibold hover:bg-yellow-400 transition"
@@ -178,7 +333,7 @@ export default function AnalyticsPage() {
         </button>
       </FilterPanel>
 
-      {/* Dungeon Analytics */}
+      {/* DUNGEON ANALYTICS */}
       <section className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6 mb-8 flex flex-col items-center">
         <div className="text-lg font-semibold text-yellow-300 mb-8 text-center">
           Dungeon Runs – {charLabel} – {dungeonLabel}
@@ -229,9 +384,64 @@ export default function AnalyticsPage() {
             </div>
           </div>
         </div>
+        {/* PIE CHART */}
+        <div className="w-full max-w-xs md:max-w-md mx-auto mt-8">
+          <PieChartByRarity counts={dungeonRarityCounts} />
+        </div>
+        {/* LINE CHART: PROFIT OVER TIME */}
+        <div className="w-full max-w-2xl mx-auto mt-8">
+          <div className="text-yellow-300 text-center font-semibold mb-2">Profit Over Time</div>
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={dungeonProfitSeries}>
+              <CartesianGrid stroke="#242b3d" strokeDasharray="5 5" />
+              <XAxis dataKey="date" stroke="#d1d6e6" fontSize={13} />
+              <YAxis stroke="#d1d6e6" fontSize={13} />
+              <Tooltip />
+              <Line
+                type="monotone"
+                dataKey="profit"
+                stroke={PRIMARY_COLOR}
+                strokeWidth={3}
+                dot={{ r: 5, fill: SECONDARY_COLOR, stroke: "#222", strokeWidth: 2 }}
+                activeDot={{ r: 7 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        {/* BAR CHART: DROPS PER DUNGEON */}
+        <div className="w-full max-w-2xl mx-auto mt-8">
+          <div className="text-yellow-300 text-center font-semibold mb-2">Drops Per Dungeon</div>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={dungeonDropsBar}>
+              <CartesianGrid stroke="#242b3d" strokeDasharray="4 4" />
+              <XAxis dataKey="name" stroke="#d1d6e6" fontSize={13} />
+              <YAxis stroke="#d1d6e6" fontSize={13} />
+              <Tooltip />
+              <Bar dataKey="drops" fill={SECONDARY_COLOR} radius={[10, 10, 0, 0]}>
+                <LabelList dataKey="drops" position="top" fill="#fff" fontSize={15} fontWeight={700} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        {/* BAR CHART: CHARACTER LEADERBOARD */}
+        <div className="w-full max-w-2xl mx-auto mt-8">
+          <div className="text-yellow-300 text-center font-semibold mb-2">Character Profit Leaderboard</div>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={dungeonLeaderboard}>
+              <CartesianGrid stroke="#242b3d" strokeDasharray="4 4" />
+              <XAxis dataKey="name" stroke="#d1d6e6" fontSize={13} />
+              <YAxis stroke="#d1d6e6" fontSize={13} />
+              <Tooltip formatter={(v, n) => [`$${v.toLocaleString()}`, n]} />
+              <Bar dataKey="profit" fill={PRIMARY_COLOR} radius={[10, 10, 0, 0]}>
+                <LabelList dataKey="profit" position="top" fill="#fff" fontSize={15} fontWeight={700}
+                  formatter={(v) => `$${v.toLocaleString()}`} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </section>
 
-      {/* Boss Analytics */}
+      {/* BOSS ANALYTICS */}
       <section className="bg-gray-900 rounded-2xl shadow-xl border border-yellow-700 p-6 mb-8 flex flex-col items-center">
         <div className="text-lg font-semibold text-yellow-300 mb-8 text-center">
           Boss Runs – {charLabel} – {bossLabel}
@@ -282,8 +492,62 @@ export default function AnalyticsPage() {
             </div>
           </div>
         </div>
-
-        {/* Exclude Chest of Stones - styled checkbox at bottom */}
+        {/* PIE CHART */}
+        <div className="w-full max-w-xs md:max-w-md mx-auto mt-8">
+          <PieChartByRarity counts={bossRarityCounts} />
+        </div>
+        {/* LINE CHART: PROFIT OVER TIME */}
+        <div className="w-full max-w-2xl mx-auto mt-8">
+          <div className="text-yellow-300 text-center font-semibold mb-2">Profit Over Time</div>
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={bossProfitSeries}>
+              <CartesianGrid stroke="#242b3d" strokeDasharray="5 5" />
+              <XAxis dataKey="date" stroke="#d1d6e6" fontSize={13} />
+              <YAxis stroke="#d1d6e6" fontSize={13} />
+              <Tooltip />
+              <Line
+                type="monotone"
+                dataKey="profit"
+                stroke={PRIMARY_COLOR}
+                strokeWidth={3}
+                dot={{ r: 5, fill: SECONDARY_COLOR, stroke: "#222", strokeWidth: 2 }}
+                activeDot={{ r: 7 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        {/* BAR CHART: DROPS PER BOSS */}
+        <div className="w-full max-w-2xl mx-auto mt-8">
+          <div className="text-yellow-300 text-center font-semibold mb-2">Drops Per Boss</div>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={bossDropsBar}>
+              <CartesianGrid stroke="#242b3d" strokeDasharray="4 4" />
+              <XAxis dataKey="name" stroke="#d1d6e6" fontSize={13} />
+              <YAxis stroke="#d1d6e6" fontSize={13} />
+              <Tooltip />
+              <Bar dataKey="drops" fill={SECONDARY_COLOR} radius={[10, 10, 0, 0]}>
+                <LabelList dataKey="drops" position="top" fill="#fff" fontSize={15} fontWeight={700} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        {/* BAR CHART: CHARACTER LEADERBOARD */}
+        <div className="w-full max-w-2xl mx-auto mt-8">
+          <div className="text-yellow-300 text-center font-semibold mb-2">Character Profit Leaderboard</div>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={bossLeaderboard}>
+              <CartesianGrid stroke="#242b3d" strokeDasharray="4 4" />
+              <XAxis dataKey="name" stroke="#d1d6e6" fontSize={13} />
+              <YAxis stroke="#d1d6e6" fontSize={13} />
+              <Tooltip formatter={(v, n) => [`$${v.toLocaleString()}`, n]} />
+              <Bar dataKey="profit" fill={PRIMARY_COLOR} radius={[10, 10, 0, 0]}>
+                <LabelList dataKey="profit" position="top" fill="#fff" fontSize={15} fontWeight={700}
+                  formatter={(v) => `$${v.toLocaleString()}`} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        {/* Exclude Chest of Stones */}
         <div className="mt-8 w-full flex justify-center">
           <label
             htmlFor="exclude-chests"
